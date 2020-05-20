@@ -1,0 +1,17 @@
+Test: ClusterMonitor is at lxcealice03.gsi.de:8084
+Execution machine:  lxbk0695.gsi.de
+#### begin system info ####
+### date   : Mon May 18 11:18:26 CEST 2020
+### uname  : 3.10.0-1062.18.1.el7.x86_64
+### system : LSB Version:	:core-4.1-amd64:core-4.1-noarch:cxx-4.1-amd64:cxx-4.1-noarch:desktop-4.1-amd64:desktop-4.1-noarch:languages-4.1-amd64:languages-4.1-noarch:printing-4.1-amd64:printing-4.1-noarch
+Distributor ID:	CentOS
+Description:	CentOS Linux release 7.7.1908 (Core)
+Release:	7.7.1908
+Codename:	Core
+#### end system info ####
+command
+develTrace_1878297159
+env.log
+stderr
+stdout
+test_macro.C

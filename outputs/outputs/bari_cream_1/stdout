@@ -1,0 +1,17 @@
+Test: ClusterMonitor is at vobox-alice.ba.infn.it:8084
+Execution machine:  wn-infn-3-10-20-a.recas.ba.infn.it
+#### begin system info ####
+### date   : Tue May 19 13:03:46 CEST 2020
+### uname  : 3.10.0-862.14.4.el7.x86_64
+### system : LSB Version:	:core-4.1-amd64:core-4.1-noarch
+Distributor ID:	CentOS
+Description:	CentOS Linux release 7.5.1804 (Core) 
+Release:	7.5.1804
+Codename:	Core
+#### end system info ####
+command
+develTrace_1879116806
+env.log
+stderr
+stdout
+test_macro.C

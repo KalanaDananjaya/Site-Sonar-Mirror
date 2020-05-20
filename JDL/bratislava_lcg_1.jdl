@@ -1,0 +1,12 @@
+Executable = "/alice/cern.ch/user/k/kwijethu/payload/entrypoint.sh";
+Requirements = other.CE == "ALICE::Bratislava::LCG";
+InputFile = {
+  "LF:/alice/cern.ch/user/k/kwijethu/payload/test_macro.C"
+};
+OutputFile = {
+  "std*", "*log"
+};
+OutputDir = "/alice/cern.ch/user/k/kwijethu/outputs/bratislava_lcg_1";
+Packages = { 
+  "VO_ALICE@AliPhysics::vAN-20200311_JALIEN-1" 
+};
