@@ -14,7 +14,7 @@ function stage_JDLs() {
 
 	for j in $(ls $LOCAL_JDL)
 	do
-	  cmd="alien_cp file:$LOCAL_JDL/$j alien:$JDL_DIR/$(basename $j)@disk:1"
+	  cmd="alien_cp -T 32 file:$LOCAL_JDL/$j alien:$JDL_DIR/$(basename $j)@disk:1"
 	  echo $cmd
 	  $cmd &
 	done
