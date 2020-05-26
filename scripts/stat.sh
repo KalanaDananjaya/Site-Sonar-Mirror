@@ -1,4 +1,6 @@
 #!/bin/bash
+echo -----Time-----
+echo Time : $(timedatectl | grep "Universal time")
 
 echo -----Host-----
 echo Uname: $(uname -a)

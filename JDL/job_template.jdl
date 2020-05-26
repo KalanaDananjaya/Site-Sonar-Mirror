@@ -3,8 +3,10 @@
 # $2 - Grid Site Name,    ex: "ALICE::FZK::ARC"
 # $3 - Output Directory,  ex: "/alice/cern.ch/user/k/kwijethu/site-sonar/outputs/fzk_arc_1"
 # "output.zip:std*,*log"
+
 Executable = "$1/scripts/stat.sh";
 Requirements = other.CE == "$2";
+
 Jobtag = {
    "Site:$2"
 };
@@ -12,6 +14,7 @@ Jobtag = {
 OutputFile = {
   "std*", "*log"
 };
+
 OutputDir = "$3";
 
 TTL="1200";

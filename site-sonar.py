@@ -64,7 +64,7 @@ def fetch_results(args):
         shutil.rmtree(absPath)
         os.mkdir(absPath)
     print ('Downloading the results to ' + absPath)
-    command = 'alien_cp -r -T 32 alien:%s/site-sonar/outputs/ file:outputs' % args.grid_home 
+    command = 'alien_cp -r -T 32 alien:{}/site-sonar/outputs/ file:outputs'.format(args.grid_home)
     print(shlex.split(command))
     with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
         for line in p.stdout:
@@ -92,6 +92,7 @@ watch_jobs_parser = subparsers.add_parser('watch')
 watch_jobs_parser.set_defaults(func=watch_jobs)
 
 fetch_results_parser = subparsers.add_parser('fetch')
+fetch_results_parser.add_argument('-d','--directory', help="File path of the output directory")
 fetch_results_parser.set_defaults(func=fetch_results)
 
 
