@@ -55,7 +55,6 @@ def watch_jobs(args):
             print('> ', line, end='') 
     if p.returncode != 0:
         raise CalledProcessError(p.returncode, p.args)
-        #print("bitcoin failed %d %s %s" % (p.returncode, output, error))
 
 def fetch_results(args):
     dirName = 'outputs'
