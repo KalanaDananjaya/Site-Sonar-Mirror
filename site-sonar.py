@@ -1,7 +1,15 @@
 import argparse,shlex,os,shutil
 from subprocess import Popen,PIPE, CalledProcessError
 
-from generate_jdl import get_grid_output_dir
+
+from db_connection import get_connection, get_sites
+
+database_file = 'site-sonar-db.db'
+
+def get_grid_output_dir(base, normalized_name, _id):
+    suffix = base + '/outputs/' + normalized_name + "_" + str(_id)
+    return os.path.join(base, suffix)
+
 
 def stage_jobs(args):
     command = 'bash staging-grid.sh {}'.format(args.grid_home)
@@ -14,27 +22,25 @@ def stage_jobs(args):
 
 
 def submit_jobs(args):
+    conn = get_connection(database_file)
+    site_details = get_sites(conn)
+
     grid_home = args.grid_home
-    jobs_per_site = args.jobs_per_site
     jdl_name = args.template or 'job_template.jdl' 
     base_dir='{}/site-sonar'.format(grid_home)
     job_path = base_dir + '/JDL/' + jdl_name
 
-    if args.list:
-        with open(args.list) as f:
-            sites = [line.strip() for line in f]
-    else:
-        sites = args.site
-    print(sites)
-    for site in sites:
+    print(site_details)
+    for site in site_details:
         print(site)
-        for i in range(1, int(jobs_per_site)+1):
-            output_dir = get_grid_output_dir(base_dir, site, i)
+        num_jobs = 2 * site['num_nodes']+1
+        for i in range(1, num_jobs):
+            output_dir = get_grid_output_dir(base_dir, site['normalized_name'], i)
             print("Job path: ",job_path)
             print("Base dir: ",base_dir)
-            print("Site name: ",site)
+            print("Site name: ",site['site_name'])
             print("Output dir: ",output_dir)
-            command='alien.py submit {} {} {} {}'.format(job_path, base_dir, site, output_dir)
+            command='alien.py submit {} {} {} {}'.format(job_path, base_dir, site['site_name'], output_dir)
             print (command)
             with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
                 for line in p.stdout:
