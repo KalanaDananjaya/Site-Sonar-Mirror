@@ -1,27 +1,42 @@
 import sqlite3
 import csv 
-
-# >>> sqlite3 site-sonar-db.db < db.sql
+import datetime
 
 
 database_file = 'site-sonar-db.db'
-
+sql_file = 'db.sql'
 
 
 ADD_SITE = 'INSERT INTO SITES (site_name,normalized_name,num_nodes,remarks) \
       VALUES ( ?, ?, ?, ? )'
 GET_SITES = 'SELECT * FROM sites'
 GET_SITENAMES = 'SELECT site_name FROM sites'
+GET_SITEID_BY_NAME = 'SELECT site_id FROM sites where site_id = ?'
+ADD_JOBS = 'INSERT INTO JOBS (job_id,site_id,timestamp,status) VALUES (?, ?, ?, ?)'
 
+# Utils
 def normalize_ce_name(target_ce):
     return target_ce.replace("::", "_").lower()[len("alice_"):]
 
-def get_connection(database_file):
-    conn = sqlite3.connect(database_file)
-    print ('Opened database successfully')
-    return conn
+# Connection Functions
+def get_connection(database_file, detect_types= sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES):
+    try:
+        conn = sqlite3.connect(database_file)
+        print ('Opened database successfully')
+        return conn
+    except sqlite3.Error as error:
+        print("Error while working with SQLite", error)
 
-def get_sites(conn):
+def initialize_db(database_file):
+    conn = get_connection(database_file)
+    with open (sql_file,'r') as f:
+        sql = f.read()
+        conn.executescript(sql)
+        conn.commit()
+
+# Querying Functions
+def get_sites():
+    conn = get_connection(database_file)
     cursor = conn.execute(GET_SITES)
     sites = []
     for row in cursor:
@@ -40,9 +55,10 @@ def get_sites(conn):
         sites.append(site)
     return sites
 
-def add_site_from_csv(conn, csv_filename):
+def add_sites_from_csv(csv_filename):
+    conn = get_connection(database_file)
     site_tuples = []
-    sitenames = get_sitenames(conn)
+    sitenames = get_sitenames()
     with open(csv_filename, newline='') as csvfile:
         csv_reader = csv.reader(csvfile, delimiter=' ', quotechar='|')
         for row in csv_reader:
@@ -75,11 +91,29 @@ def check_sitename_exists(sitenames,current_site_name):
         else:
             return False
 
-def get_sitenames(conn):
+def get_sitenames():
+    conn = get_connection(database_file)
     sitenames=[]
     cursor = conn.execute(GET_SITENAMES)
     for row in cursor:
         sitenames.append(row[0])
     return sitenames
 
+# Not tested
+def get_siteid_by_name(site_name):
+    conn = get_connection(database_file)
+    cursor = conn.execute(GET_SITEID_BY_NAME,site_name)
 
+def add_job_batch(jobs,site_id):
+    timestamp = datetime.datetime.now()
+    job_tuples = []
+    for job_id in jobs:
+        job_tuples.append((job_id, site_id, timestamp, 'STARTED'))
+    conn = get_connection(database_file)
+    conn.executemany(ADD_JOBS, job_tuples)
+    conn.commit()
+
+
+if __name__ == "__main__":
+    conn = get_connection(database_file)
+    add_sites_from_csv('test_ce_list.csv')

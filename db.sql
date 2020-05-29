@@ -16,4 +16,5 @@ DROP TABLE IF EXISTS jobs;
 CREATE TABLE jobs
 (job_id int NOT NULL PRIMARY KEY,
 site_id int NOT NULL,
-timestamp int NOT NULL);
+timestamp int NOT NULL,
+status text CHECK( status IN ('STARTED','FINISHED') ) NOT NULL);
