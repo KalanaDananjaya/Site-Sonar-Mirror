@@ -1,12 +1,12 @@
 import argparse,shlex,os,shutil,re
 from subprocess import Popen,PIPE, CalledProcessError
 
-
 from db_connection import get_sites, add_job_batch, add_sites_from_csv,initialize_db
 
 database_file = 'site-sonar-db.db'
 site_csv_file = 'test_ce_list.csv'
 
+# Utils
 def escape_string(string):
     return re.sub(r'\x1b(\[.*?[@-~]|\].*?(\x07|\x1b\\))', '', string)
 
@@ -14,6 +14,7 @@ def get_grid_output_dir(base, normalized_name, _id):
     suffix = base + '/outputs/' + normalized_name + "_" + str(_id)
     return os.path.join(base, suffix)
 
+# CLI Functions
 def init(args):
     if os.path.exists(database_file): 
         os.remove(database_file) 

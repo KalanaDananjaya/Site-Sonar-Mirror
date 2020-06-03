@@ -1,6 +1,13 @@
 #!/bin/bash
-echo -----Time-----
-echo Time : $(timedatectl | grep "Universal time")
+# Template Format
+#
+# echo -----<Section Title>-----
+# echo <Feature>: $(<Command>)
+# echo <Feature>: $(<Command>)
+# echo -----<Next Section Title>-----
+# 
+# Make sure only commands with single line outputs are used
+# Make sure same number of 5 hyphens are used before and after a title
 
 echo -----Host-----
 echo Uname: $(uname -a)
@@ -20,9 +27,9 @@ echo Overlay: $(cat /etc/singularity/singularity.conf | grep "enable overlay" | 
 echo Underlay: $(cat /etc/singularity/singularity.conf | grep "enable underlay")
 
 echo -----Container?-----
-ls / | grep workdir
+echo Container Enabled?: $(ls / | grep workdir)
 
 echo -----User namespaces?-----
-cat /proc/sys/user/max_user_namespaces
+echo Max namespaces: $(cat /proc/sys/user/max_user_namespaces)
 
 sleep 60
