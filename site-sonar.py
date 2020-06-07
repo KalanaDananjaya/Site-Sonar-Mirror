@@ -1,10 +1,11 @@
-import argparse,shlex,os,shutil,re
+import argparse,shlex,os,shutil,re,logging
 from subprocess import Popen,PIPE, CalledProcessError
 
 from db_connection import get_sites, add_job_batch, add_sites_from_csv,initialize_db
+from output_parser import parse_output_directory
 
-database_file = 'site-sonar-db.db'
-site_csv_file = 'test_ce_list.csv'
+from config import DATABASE_FILE, SITES_CSV_FILE
+
 
 # Utils
 def escape_string(string):
@@ -16,17 +17,19 @@ def get_grid_output_dir(base, normalized_name, _id):
 
 # CLI Functions
 def init(args):
-    if os.path.exists(database_file): 
-        os.remove(database_file) 
-    initialize_db(database_file)
-    add_sites_from_csv(site_csv_file)
+    if os.path.exists(DATABASE_FILE): 
+        os.remove(DATABASE_FILE) 
+    initialize_db(DATABASE_FILE)
+    add_sites_from_csv(SITES_CSV_FILE)
+    logging.info('Databased initialized using %s file',SITES_CSV_FILE)
 
 
 def stage_jobs(args):
     command = 'bash staging-grid.sh {}'.format(args.grid_home)
     with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
+        logging.info('Staging jobs...')
         for line in p.stdout:
-            print('> ', line, end='') 
+            logging.info('> %s ',line)
     if p.returncode != 0:
         raise CalledProcessError(p.returncode, p.args)
 
@@ -42,17 +45,17 @@ def submit_jobs(args):
     for site in site_details:
         num_jobs = 2 * site['num_nodes']+1
         jobs = []
-        print ('Submitting '+ str(num_jobs - 1) + ' jobs to the Grid site ' + site['site_name'])
+        logging.info('Submitting %s jobs to the Grid site %s',str(num_jobs - 1), site['site_name'])
         for i in range(1, num_jobs):
             output_dir = get_grid_output_dir(base_dir, site['normalized_name'], i)
-            print("Job path: ",job_path)
-            print("Base dir: ",base_dir)
-            print("Site name: ",site['site_name'])
-            print("Output dir: ",output_dir)
+            logging.debug('Job path: %s',job_path)
+            logging.debug('Base dir: %s',base_dir)
+            logging.debug('Site name: %s',site['site_name'])
+            logging.debug('Output dir:  %s',output_dir)
             command='alien.py submit {} {} {} {}'.format(job_path, base_dir, site['site_name'], output_dir)
             with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
                 for line in p.stdout:
-                    print('> ', line, end='') 
+                    logging.info('> %s ',line) 
                     if ("Your new job ID is" in line):
                         job_id = line.split(' ')[-1]
                         job_id = escape_string(job_id)
@@ -81,19 +84,27 @@ def fetch_results(args):
     if os.path.exists(dirName):
         shutil.rmtree(absPath)
         os.mkdir(absPath)
-    print ('Downloading the results to ' + absPath)
+    logging.info('Downloading the results to  %s ',absPath) 
     command = 'alien_cp -r -T 32 alien:{}/site-sonar/outputs/ file:outputs'.format(args.grid_home)
-    print(shlex.split(command))
     with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
         for line in p.stdout:
             print('> ', line, end='') 
+            logging.info('> %s ',line) 
     if p.returncode != 0:
         raise CalledProcessError(p.returncode, p.args)
 
+def parse_output(args):
+    """
+    Return True if all the files in the directory was parsed successfully
+    """
+    logging.info('Output parsing started...') 
+    parsed = parse_output_directory()
+    
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--version', action='version', version='0.1')
 parser.add_argument('--grid-home', default='/alice/cern.ch/user/k/kwijethu', help="Grid Home Path")
+parser.add_argument('--log', default='INFO')
 subparsers = parser.add_subparsers()
 
 stage_jobs_parser = subparsers.add_parser('stage')
@@ -116,7 +127,16 @@ fetch_results_parser.set_defaults(func=fetch_results)
 init_parser = subparsers.add_parser('init')
 init_parser.set_defaults(func=init)
 
+parse_outputs_parser = subparsers.add_parser('parse')
+parse_outputs_parser.set_defaults(func=parse_output)
+
 
 if __name__ == '__main__':
+
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s',handlers=[
+        logging.FileHandler("site-sonar.log",'w'),
+        logging.StreamHandler() 
+        ])
+    logging.info ('Site Sonar application started')
     args = parser.parse_args()
     args.func(args)
