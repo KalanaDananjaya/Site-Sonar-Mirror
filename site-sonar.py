@@ -4,7 +4,7 @@ from subprocess import Popen,PIPE, CalledProcessError
 from db_connection import get_sites, add_job_batch, add_sites_from_csv,initialize_db
 from output_parser import parse_output_directory
 
-from config import DATABASE_FILE, SITES_CSV_FILE
+from config import DATABASE_FILE, SITES_CSV_FILE, LOG_FILE
 
 
 # Utils
@@ -55,11 +55,12 @@ def submit_jobs(args):
             command='alien.py submit {} {} {} {}'.format(job_path, base_dir, site['site_name'], output_dir)
             with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
                 for line in p.stdout:
-                    logging.info('> %s ',line) 
-                    if ("Your new job ID is" in line):
-                        job_id = line.split(' ')[-1]
-                        job_id = escape_string(job_id)
-                        jobs.append(int(job_id))
+                    if not line.isspace():
+                        logging.info('> %s ',line) 
+                        if ("Your new job ID is" in line):
+                            job_id = line.split(' ')[-1]
+                            job_id = escape_string(job_id)
+                            jobs.append(int(job_id))
             if p.returncode != 0:
                 raise CalledProcessError(p.returncode, p.args)
         add_job_batch(jobs, site['site_id'])
@@ -88,7 +89,6 @@ def fetch_results(args):
     command = 'alien_cp -r -T 32 alien:{}/site-sonar/outputs/ file:outputs'.format(args.grid_home)
     with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
         for line in p.stdout:
-            print('> ', line, end='') 
             logging.info('> %s ',line) 
     if p.returncode != 0:
         raise CalledProcessError(p.returncode, p.args)
@@ -134,7 +134,7 @@ parse_outputs_parser.set_defaults(func=parse_output)
 if __name__ == '__main__':
 
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s',handlers=[
-        logging.FileHandler("site-sonar.log",'w'),
+        logging.FileHandler(LOG_FILE,'w'),
         logging.StreamHandler() 
         ])
     logging.info ('Site Sonar application started')
