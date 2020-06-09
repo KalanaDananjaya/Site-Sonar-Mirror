@@ -1,7 +1,8 @@
 import os
 import json
+import logging
 
-from db_connection import get_siteid_by_normalized_name
+from db_connection import get_siteid_by_normalized_name, get_nodeid_by_node_name, add_parsed_output_by_names, delete_parsed_outputs,initialize_processing_state, update_processing_state_by_sitename
 
 output_dir = 'outputs'
 
@@ -75,32 +76,41 @@ def parse_init_section(init_section):
     return site_name, hostname
     
 
-for dir in os.listdir(output_dir):
-    filepath = output_dir +'/' + dir 
-    # Remove the job number from the directory name
-    split_dir_name = dir.rsplit('_',1)
-    normalized_site_name = split_dir_name[0]
-    job_number = split_dir_name[1]
-    
+def parse_output_directory():
     try:
-        if 'stdout' not in os.listdir(filepath):
-            raise IOError('Stdout File not avaialabe')
-        else:
-            with open(filepath + '/stdout','r') as f:
-                print (os.path.realpath(f.name))
-                output = f.readlines()
-                # First 2 lines should be processed separately as they are different from the template
-                init_section = output[:2]
-                mid_section = output[2:]
-                file_data = {}
-                site_name, hostname = parse_init_section(init_section)
-                mid_sections = parse_mid_section(mid_section)
-                file_data.update({'site_name': site_name})
-                file_data.update({'hostname': hostname})
-                file_data.update({'sections': mid_sections})
-                print(json.dumps(file_data))
-                print ('searching id for', normalized_site_name)
-                get_siteid_by_normalized_name(normalized_site_name)
-    except NotADirectoryError:
-        pass
+        delete_parsed_outputs()
+        initialize_processing_state()
+        for dir in os.listdir(output_dir):
+            filepath = output_dir +'/' + dir 
+            # Remove the job number from the directory name
+            split_dir_name = dir.rsplit('_',1)
+            normalized_site_name = split_dir_name[0]
+            job_number = split_dir_name[1]
+            try:
+                if 'stdout' not in os.listdir(filepath):
+                    raise IOError('Stdout File not avaialabe')
+                else:
+                    with open(filepath + '/stdout','r') as f:
+                        output = f.readlines()
+                        # First 2 lines should be processed separately as they are different from the template
+                        init_section = output[:2]
+                        mid_section = output[2:]
+                        file_data = {}
+                        site_name, hostname = parse_init_section(init_section)
+                        mid_sections = parse_mid_section(mid_section)
+                        file_data.update({'site_name': site_name})
+                        file_data.update({'hostname': hostname})
+                        file_data.update({'sections': mid_sections})
+                        parsed_result = json.dumps(file_data)
+                        result = add_parsed_output_by_names(normalized_site_name,file_data['hostname'],parsed_result)
+                        if result:
+                            logging.info('%s directory parsed succesfully', dir)
+                            update_processing_state_by_sitename(normalized_site_name,'PARSED')
+                        else:
+                            logging.error('Error parsing %s directory',dir)
+            except NotADirectoryError:
+                logging.debug('%s is not a directory.Skipping...',dir)
+    except Exception as error:
+        logging.exception(error)
+
 
