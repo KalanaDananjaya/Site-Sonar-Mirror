@@ -17,7 +17,7 @@ CREATE TABLE jobs
 (job_id int NOT NULL PRIMARY KEY,
 site_id int NOT NULL,
 timestamp int NOT NULL,
-abstract_state text CHECK(abstract_state IN ('STARTED','FINISHED') ) NOT NULL,
+abstract_state text CHECK(abstract_state IN ('STARTED','ERROR','STALLED','FINISHED') ) NOT NULL,
 state text CHECK(state IN ('K','R','ST','D','DW','W','OW','I','S','SP','SV','SVD','ANY','ASG','AST','FM','IDL','INT','M','SW','ST','TST','EA','EE','EI','EIB','EM','ERE','ES','ESV','EV','EVN','EVT','ESP','EW','EVE','FF','Z','XP','UP','F','INC') ) NOT NULL);
 
 DROP TABLE IF EXISTS parsed_outputs;

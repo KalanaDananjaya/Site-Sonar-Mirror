@@ -76,7 +76,7 @@ def add_sites_from_csv(csv_filename):
                     num_nodes = int(num_nodes)
                 normalized_name = normalize_ce_name(current_site_name)
                 site_tuples.append((current_site_name, normalized_name, num_nodes, ''))
-                logging.info('Adding %s to the database', current_site_name)
+                logging.debug('Adding %s to the database', current_site_name)
     conn.executemany(ADD_SITE, site_tuples)
     conn.commit()
     logging.debug("Total number of sites added : %s", conn.total_changes)
@@ -288,5 +288,3 @@ def update_job_states(job_id,abstract_state,state):
         conn.commit()
     except sqlite3.Error as error:
         logging.exception("Error while executing the query: %s", error)
-
-#def get_incomplete_jobs_by_siteid(site_id)
