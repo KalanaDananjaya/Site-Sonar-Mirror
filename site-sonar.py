@@ -4,7 +4,7 @@ from multiprocessing import Process
 
 from db_connection import add_sites_from_csv,initialize_db
 from output_parser import parse_output_directory
-from config import DATABASE_FILE, SITES_CSV_FILE, LOG_FILE
+from config import DATABASE_FILE, SITES_CSV_FILE, LOG_FILE, SLEEP_BETWEEN_SUBMIT_AND_MONITOR, GRID_USER_HOME, JOB_TEMPLATE_NAME
 from background_processes import job_submission,job_monitor
 
 # CLI Functions
@@ -27,8 +27,8 @@ def stage_jobs(args):
 
 
 def submit_jobs(args):
-    grid_home = args.grid_home or '/alice/cern.ch/user/k/kwijethu' 
-    jdl_name = args.template or 'job_template.jdl'
+    grid_home = GRID_USER_HOME 
+    jdl_name = JOB_TEMPLATE_NAME
     job_submission(grid_home,jdl_name) 
 
 def monitor_jobs(args):
@@ -61,14 +61,13 @@ def submit_and_monitor(args):
     submit = Process(target=job_submission, args=(grid_home,jdl_name))
     monitor = Process(target=job_monitor())
     submit.start()
-    time.sleep(30)
+    time.sleep(SLEEP_BETWEEN_SUBMIT_AND_MONITOR)
     monitor.start()
     submit.join()
     monitor.join()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--version', action='version', version='0.1')
-parser.add_argument('--grid-home', default='/alice/cern.ch/user/k/kwijethu', help="Grid Home Path")
 parser.add_argument('--log', default='INFO')
 subparsers = parser.add_subparsers()
 
@@ -76,17 +75,12 @@ stage_jobs_parser = subparsers.add_parser('stage')
 stage_jobs_parser.set_defaults(func=stage_jobs)
 
 submit_jobs_parser = subparsers.add_parser('submit')
-submit_jobs_parser.add_argument('-l','--list', help="Grid Site List")
-submit_jobs_parser.add_argument('-n','--jobs_per_site', default=1, help="Number of jobs submitted to each site")
-submit_jobs_parser.add_argument('-s','--site',help="Target Site")
-submit_jobs_parser.add_argument('-t', '--template', help="Custom Job Template JDL(Must be in $GRID_HOME/site-sonar/JDL/ directory")
 submit_jobs_parser.set_defaults(func=submit_jobs)
 
 monitor_jobs_parser = subparsers.add_parser('monitor')
 monitor_jobs_parser.set_defaults(func=monitor_jobs)
 
 fetch_results_parser = subparsers.add_parser('fetch')
-fetch_results_parser.add_argument('-d','--directory', help="File path of the output directory")
 fetch_results_parser.set_defaults(func=fetch_results)
 
 init_parser = subparsers.add_parser('init')

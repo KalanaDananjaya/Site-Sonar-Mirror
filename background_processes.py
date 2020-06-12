@@ -7,7 +7,7 @@ import re
 from dateutil import parser as dateparser
 from subprocess import Popen,PIPE, CalledProcessError
 
-from config import JOB_ERROR_STATES, JOB_RUNNING_STATES, JOB_WAITING_STATES
+from config import JOB_ERROR_STATES, JOB_RUNNING_STATES, JOB_WAITING_STATES, SLEEP_BETWEEN_MONITOR_PINGS, JOB_WAITING_TIMEOUT
 from db_connection import get_sites, add_job_batch, get_processing_state_siteids_by_state,get_jobs_by_siteid_and_abs_state,update_job_states,initialize_processing_state,update_processing_state
 
 # Utils
@@ -101,7 +101,7 @@ def job_monitor():
                         state = job_tuple[1]
                         if job_tuple[1] in JOB_WAITING_STATES:
                             wait_time_in_hrs = (current_time - dateparser.parse(job['timestamp'])).total_seconds()/3600
-                            if wait_time_in_hrs > 0.15:
+                            if wait_time_in_hrs > JOB_WAITING_TIMEOUT:
                                 abstract_state = 'STALLED'
                                 update_job_states(job_id,abstract_state,state)
                                 logging.debug('Job with job id %s marked as %s because it is waiting for %.2f hours',str(job_id),abstract_state,wait_time_in_hrs) 
@@ -113,5 +113,4 @@ def job_monitor():
                             abstract_state = 'FINISHED'
                             update_job_states(job_id,abstract_state,state)
                             logging.debug('Job with job id %s marked as %s',str(job_id),abstract_state)
-                        
-        time.sleep(30)
+        time.sleep(SLEEP_BETWEEN_MONITOR_PINGS)
