@@ -2,6 +2,7 @@ import sqlite3
 import csv 
 import datetime
 import logging
+import os
 
 from config import SQL_FILE,DATABASE_FILE, JOB_STATES
 from sql_queries import *
@@ -12,19 +13,23 @@ def normalize_ce_name(target_ce):
     return target_ce.replace("::", "_").lower()[len("alice_"):]
 
 # Connection Functions
-def get_connection(DATABASE_FILE, detect_types= sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES):
+def get_connection(database_file, detect_types= sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES):
     try:
-        conn = sqlite3.connect(DATABASE_FILE)
+        conn = sqlite3.connect(database_file)
         return conn
     except sqlite3.Error as error:
         logging.exception("Error while connecting to database: %s", error)
 
-def initialize_db(DATABASE_FILE):
-    conn = get_connection(DATABASE_FILE)
+def initialize_db(database_file):
+    conn = get_connection(database_file)
     with open (SQL_FILE,'r') as f:
         sql = f.read()
         conn.executescript(sql)
         conn.commit()
+
+def clear_db(database_file):
+    if os.path.exists(database_file): 
+        os.remove(database_file) 
 
 # Site Related Functions
 def get_sites():
@@ -113,6 +118,19 @@ def get_siteid_by_normalized_name(normalized_name):
         logging.debug ('Site_id of %s: %s',normalized_name, site_id)
         return site_id
 
+def get_normalized_name_by_siteid(site_id):
+    logging.debug('Searching normalized name for site with id: %s...', str(site_id))
+    conn = get_connection(DATABASE_FILE)
+    try:
+        cursor = conn.execute(GET_NORMALIZED_NAME_BY_SITE_ID,[site_id])
+    except sqlite3.Error as error:
+        logging.exception("Error while executing the query: %s", error)
+    rows = cursor.fetchall()
+    for row in rows:
+        normalized_name = row[0]
+        logging.debug ('Normalized name of site %s: %s',str(site_id),normalized_name)
+        return normalized_name
+
 # Not tested
 def get_siteid_by_name(site_name):
     conn = get_connection(DATABASE_FILE)
@@ -159,8 +177,8 @@ def add_parsed_output_by_names(normalized_site_name,node_name,parsed_result):
     node_id = get_nodeid_by_node_name(site_id, node_name)
     if not node_id:
         node_id = add_node(site_id,node_name)
-    logging.debug ('Node id of %s in site_id %s: %s', node_name, site_id, node_id)
-    add_parsed_output(site_id,node_id,parsed_result)
+        logging.debug ('Assigned Node Id %s to %s of site %s',node_id,node_name,site_id)
+        add_parsed_output(site_id,node_id,parsed_result)
     return True
 
 def delete_parsed_outputs():
@@ -202,7 +220,7 @@ def update_processing_state(site_id,state):
     try:
         cursor = conn.execute(UPDATE_PROCESSING_STATE,[state,site_id])
         conn.commit()
-        logging.debug('Updated processing state successfully')
+        logging.debug('Updated processing state of site %s to %s successfully',site_id,state)
     except sqlite3.Error as error:
         logging.exception("Error while executing the query: %s", error)
 

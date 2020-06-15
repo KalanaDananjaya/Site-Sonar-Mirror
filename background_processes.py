@@ -6,10 +6,11 @@ import os
 import re
 from dateutil import parser as dateparser
 from subprocess import Popen,PIPE, CalledProcessError
+import multiprocessing
 
-from config import JOB_ERROR_STATES, JOB_RUNNING_STATES, JOB_WAITING_STATES, SLEEP_BETWEEN_MONITOR_PINGS, JOB_WAITING_TIMEOUT
-from db_connection import get_sites, add_job_batch, get_processing_state_siteids_by_state,get_jobs_by_siteid_and_abs_state,update_job_states,initialize_processing_state,update_processing_state
-
+from config import JOB_ERROR_STATES, JOB_RUNNING_STATES, JOB_WAITING_STATES, SLEEP_BETWEEN_MONITOR_PINGS, JOB_WAITING_TIMEOUT, SLEEP_BETWEEN_PARSER_PINGS
+from db_connection import get_sites, add_job_batch, get_processing_state_siteids_by_state,get_jobs_by_siteid_and_abs_state,update_job_states,initialize_processing_state,update_processing_state, get_site_ids, get_normalized_name_by_siteid
+from output_parser import parse_output_directory
 # Utils
 def escape_string(string):
     return re.sub(r'\x1b(\[.*?[@-~]|\].*?(\x07|\x1b\\))', '', string)
@@ -19,6 +20,7 @@ def get_grid_output_dir(base, normalized_name, _id):
     return os.path.join(base, suffix)
 
 def job_submission(grid_home,jdl_name):
+    
     site_details = get_sites()
     initialize_processing_state()
     base_dir='{}/site-sonar'.format(grid_home)
@@ -56,22 +58,30 @@ def job_monitor():
             return
         else:
             site_id_string = ','.join(list(map(str, site_ids)))
-            logging.debug('Pending sites for job completion: %s', site_id_string)
             for site_id in site_ids:
                 # Get already started jobs in current site
                 pending_jobs = get_jobs_by_siteid_and_abs_state(site_id,'STARTED')
                 completed_jobs = get_jobs_by_siteid_and_abs_state(site_id,'FINISHED') \
                     + get_jobs_by_siteid_and_abs_state(site_id,'ERROR') \
                     + get_jobs_by_siteid_and_abs_state(site_id,'STALLED')
+                erroneous_jobs = get_jobs_by_siteid_and_abs_state(site_id,'ERROR') \
+                    + get_jobs_by_siteid_and_abs_state(site_id,'STALLED')
                 try:
-                    # If more than 90% jobs are finished, mark the site as complete
+                    
                     completed_job_ratio = len(completed_jobs)/(len(pending_jobs)+len(completed_jobs))
                     logging.debug ('Job completion ratio of site %s: %s',site_id, completed_job_ratio)
+                    errorneous_job_ratio = len(erroneous_jobs)/len(completed_jobs)
                 except ZeroDivisionError:
                     completed_job_ratio = 0
+                # If more than 90% jobs are finished, mark the site as complete
                 if completed_job_ratio >= 0.9:
-                    update_processing_state(site_id,'COMPLETE')
-                    logging.info('Site %s marked as COMPLETE',site_id)
+                    # If more than 90% jobs out of completed jobs are erroneous,mark the site as erroneous
+                    if errorneous_job_ratio >= 0.9:
+                        update_processing_state(site_id,'ERRONEOUS')
+                        logging.info('Site %s marked as ERRONEOUS',site_id)
+                    else:
+                        update_processing_state(site_id,'COMPLETE')
+                        logging.info('Site %s marked as COMPLETE',site_id)
                 pending_job_ids_in_site =[]
                 if len(pending_jobs)==0:
                     logging.info('All the jobs in %s site have been completed',site_id) 
@@ -114,3 +124,29 @@ def job_monitor():
                             update_job_states(job_id,abstract_state,state)
                             logging.debug('Job with job id %s marked as %s',str(job_id),abstract_state)
         time.sleep(SLEEP_BETWEEN_MONITOR_PINGS)
+    
+
+def job_parser():
+    command = 'alien.py cp -r -T 32 -glob "{}*" alien:/alice/cern.ch/user/k/kwijethu/site-sonar/outputs/ file:outputs/{}'
+    while True:
+        all_site_ids = get_site_ids()
+        parsed_site_ids = get_processing_state_siteids_by_state('PARSED') + get_processing_state_siteids_by_state('ERRONEOUS')
+        if len(all_site_ids) == len(parsed_site_ids):
+            logging.info('All sites have been PARSED')
+            return
+        else:
+            completed_site_ids = get_processing_state_siteids_by_state('COMPLETE')
+            logging.debug('Parsing sites: %s', completed_site_ids)
+            for site_id in completed_site_ids:
+                name = get_normalized_name_by_siteid(site_id)
+                updated_command = command.format(name,name)
+                with Popen(shlex.split(updated_command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
+                    for line in p.stdout:
+                        logging.debug('> %s ',line.rstrip()) 
+                if p.returncode != 0:
+                    raise CalledProcessError(p.returncode, p.args)
+                parse_output_directory('outputs/'+name)
+                update_processing_state(site_id,'PARSED')
+                logging.info('Site %s marked as PARSED',site_id)
+        time.sleep(SLEEP_BETWEEN_PARSER_PINGS)
+    

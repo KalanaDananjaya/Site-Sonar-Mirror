@@ -31,4 +31,4 @@ DROP TABLE IF EXISTS processing_state;
 CREATE TABLE processing_state
 (site_id int NOT NULL PRIMARY KEY,
 timestamp int NOT NULL,
-state text CHECK(state IN ('WAITING','COMPLETE','PARSED','PROCESSED') ) NOT NULL);
+state text CHECK(state IN ('WAITING','COMPLETE','ERRONEOUS','PARSED','PROCESSED') ) NOT NULL);

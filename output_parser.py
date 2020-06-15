@@ -1,10 +1,9 @@
 import os
+import shutil
 import json
 import logging
 
 from db_connection import get_siteid_by_normalized_name, get_nodeid_by_node_name, add_parsed_output_by_names, delete_parsed_outputs,initialize_processing_state, update_processing_state_by_sitename
-
-output_dir = 'outputs'
 
 def process_section(section_array):
     section_title = section_array[0].replace('-----','').strip()
@@ -74,12 +73,13 @@ def parse_init_section(init_section):
     # Execution Machine Hostname
     hostname = init_section[1].split(':',1)[1].strip()
     return site_name, hostname
-    
 
-def parse_output_directory():
+def clear_output_dir(output_dir):
+    if os.path.exists(output_dir): 
+        shutil.rmtree(output_dir, ignore_errors=True)
+
+def parse_output_directory(output_dir):
     try:
-        delete_parsed_outputs()
-        initialize_processing_state()
         for dir in os.listdir(output_dir):
             filepath = output_dir +'/' + dir 
             # Remove the job number from the directory name

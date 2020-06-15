@@ -5,6 +5,7 @@ GET_SITENAMES = 'SELECT site_name FROM sites'
 GET_SITE_IDS = 'SELECT site_id FROM sites'
 GET_SITEID_BY_NAME = 'SELECT site_id FROM sites where site_id = (?)'
 GET_SITEID_BY_NORMALIZED_NAME = 'SELECT site_id FROM sites where normalized_name = (?)'
+GET_NORMALIZED_NAME_BY_SITE_ID = 'SELECT normalized_name FROM sites where  site_id = (?)'
 
 ADD_NODE = 'INSERT INTO nodes (site_id,node_name) VALUES (?, ?)'
 GET_NODEID_BY_NODE_NAME = 'SELECT node_id FROM nodes WHERE site_id = (?) and node_name = (?)'
