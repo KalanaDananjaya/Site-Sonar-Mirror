@@ -8,38 +8,64 @@ from dateutil import parser as dateparser
 from subprocess import Popen,PIPE, CalledProcessError
 import multiprocessing
 
-from config import JOB_ERROR_STATES, JOB_RUNNING_STATES, JOB_WAITING_STATES, SLEEP_BETWEEN_MONITOR_PINGS, JOB_WAITING_TIMEOUT, SLEEP_BETWEEN_PARSER_PINGS
-from db_connection import get_sites, add_job_batch, get_processing_state_siteids_by_state,get_jobs_by_siteid_and_abs_state,update_job_states,initialize_processing_state,update_processing_state, get_site_ids, get_normalized_name_by_siteid
+from config import *
+from db_connection import *
 from output_parser import parse_output_directory
+
 # Utils
 def escape_string(string):
     return re.sub(r'\x1b(\[.*?[@-~]|\].*?(\x07|\x1b\\))', '', string)
 
 def get_grid_output_dir(base, normalized_name, _id):
-    suffix = base + '/outputs/' + normalized_name + "_" + str(_id)
-    return os.path.join(base, suffix)
+    out_dir = base + '/' + normalized_name + "_" + str(_id)
+    return os.path.join(out_dir)
+
+def clear_grid_output_dir():
+    """ 
+    Clear GRID_SITE_SONAR_OUTPUT_DIR of the user if it exists
+    """
+    logging.info('Clearing User Grid output directory... : %s/%s',GRID_USER_HOME,GRID_SITE_SONAR_OUTPUT_DIR)
+    command = 'alien.py rm -rf {}/{}'.format(GRID_USER_HOME,GRID_SITE_SONAR_OUTPUT_DIR)
+    with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
+        for line in p.stdout:
+            logging.debug('> %s ',line.rstrip()) 
+    if p.returncode != 0:
+        if p.returncode == 5 :
+            logging.debug('Grid output directory does not exist. No need to clear')
+        else:
+            raise CalledProcessError(p.returncode, p.args)
+    else:
+        logging.info('Grid output folder cleared succesfully')
+
 
 def job_submission(grid_home,jdl_name):
-    
+    """ 
+    Submit JOB FACTOR number of jobs per each Grid site
+
+    Args:
+        grid_home (str): Path to User Grid Home Directory
+        jdl_name (str): Name of the JDL file in the /JDL directory
+
+    """
     site_details = get_sites()
     initialize_processing_state()
-    base_dir='{}/site-sonar'.format(grid_home)
-    job_path = base_dir + '/JDL/' + jdl_name
+    job_path = GRID_USER_HOME + '/' + GRID_SITE_SONAR_HOME + '/JDL/' + jdl_name
 
     for site in site_details:
-        num_jobs = 2 * site['num_nodes']+1
+        num_jobs = JOB_FACTOR * site['num_nodes']+1
         jobs = []
         logging.info('Submitting %s jobs to the Grid site %s',str(num_jobs - 1), site['site_name'])
         for i in range(1, num_jobs):
-            output_dir = get_grid_output_dir(base_dir, site['normalized_name'], i)
+            output_dir = get_grid_output_dir(GRID_SITE_SONAR_OUTPUT_DIR, site['normalized_name'], i)
+            site_sonar_dir = GRID_USER_HOME + '/' + GRID_SITE_SONAR_HOME
             logging.debug('Job path: %s',job_path)
-            logging.debug('Base dir: %s',base_dir)
+            logging.debug('Base dir: %s',site_sonar_dir)
             logging.debug('Site name: %s',site['site_name'])
             logging.debug('Output dir:  %s',output_dir)
-            command='alien.py submit {} {} {} {}'.format(job_path, base_dir, site['site_name'], output_dir)
+            command='alien.py submit {} {} {} {}'.format(job_path, site_sonar_dir, site['site_name'], output_dir)
             with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
                 for line in p.stdout:
-                    logging.info('> %s ',line.rstrip()) 
+                    logging.debug('> %s ',line.rstrip()) 
                     if ("Your new job ID is" in line):
                         job_id = line.split(' ')[-1]
                         job_id = escape_string(job_id)
@@ -47,8 +73,14 @@ def job_submission(grid_home,jdl_name):
             if p.returncode != 0:
                 raise CalledProcessError(p.returncode, p.args)
         add_job_batch(jobs, site['site_id'])
+        update_site_last_update_time(site['site_id'])
 
 def job_monitor():
+    """
+    Monitor the state of the jobs running in the Grid.
+    Monitor Grid site coverage
+
+    """
     command = 'alien.py ps -j {}'
     while True:
         # Get sites which are currently waiting
@@ -67,7 +99,6 @@ def job_monitor():
                 erroneous_jobs = get_jobs_by_siteid_and_abs_state(site_id,'ERROR') \
                     + get_jobs_by_siteid_and_abs_state(site_id,'STALLED')
                 try:
-                    
                     completed_job_ratio = len(completed_jobs)/(len(pending_jobs)+len(completed_jobs))
                     logging.debug ('Job completion ratio of site %s: %s',site_id, completed_job_ratio)
                     errorneous_job_ratio = len(erroneous_jobs)/len(completed_jobs)
@@ -84,7 +115,7 @@ def job_monitor():
                         logging.info('Site %s marked as COMPLETE',site_id)
                 pending_job_ids_in_site =[]
                 if len(pending_jobs)==0:
-                    logging.info('All the jobs in %s site have been completed',site_id) 
+                    logging.info('No jobs are pending in site %s',site_id) 
                 else:
                     for job in pending_jobs:
                         pending_job_ids_in_site.append(job['job_id'])    
@@ -95,16 +126,16 @@ def job_monitor():
                     # Query the status of jobs in the selected site
                     current_state = []
                     with Popen(shlex.split(updated_command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
-                            for line in p.stdout:
-                                logging.debug('> %s ',line.rstrip()) 
-                                delimited_line = line.split()
-                                job_id = delimited_line[1]
-                                state = delimited_line[3]
-                                current_state.append((job_id,state))
+                        for line in p.stdout:
+                            logging.debug('> %s ',line.rstrip()) 
+                            delimited_line = line.split()
+                            job_id = delimited_line[1]
+                            state = delimited_line[3]
+                            current_state.append((job_id,state))
                     if p.returncode != 0:
                         raise CalledProcessError(p.returncode, p.args)
 
-                    # Update jobs states
+                    # Update job states
                     current_time = datetime.datetime.now()
                     for job_tuple in current_state:
                         job_id = job_tuple[0]
@@ -127,7 +158,11 @@ def job_monitor():
     
 
 def job_parser():
-    command = 'alien.py cp -r -T 32 -glob "{}*" alien:/alice/cern.ch/user/k/kwijethu/site-sonar/outputs/ file:outputs/{}'
+    """
+    Parse the results of jobs in completed Grid sites
+
+    """
+    command = 'alien.py cp -r -T 32 -glob "{}*" alien:{}/{}/ file:{}/{}'
     while True:
         all_site_ids = get_site_ids()
         parsed_site_ids = get_processing_state_siteids_by_state('PARSED') + get_processing_state_siteids_by_state('ERRONEOUS')
@@ -139,7 +174,7 @@ def job_parser():
             logging.debug('Parsing sites: %s', completed_site_ids)
             for site_id in completed_site_ids:
                 name = get_normalized_name_by_siteid(site_id)
-                updated_command = command.format(name,name)
+                updated_command = command.format(name,GRID_USER_HOME,GRID_SITE_SONAR_OUTPUT_DIR,OUTPUT_FOLDER, name)
                 with Popen(shlex.split(updated_command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
                     for line in p.stdout:
                         logging.debug('> %s ',line.rstrip()) 
