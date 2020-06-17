@@ -4,7 +4,13 @@ CREATE TABLE sites
 site_name text NOT NULL,
 normalized_name text NOT NULL,
 num_nodes int NOT NULL,
-remarks text);
+last_update text);
+
+DROP TABLE IF EXISTS processing_state;
+CREATE TABLE processing_state
+(site_id int NOT NULL PRIMARY KEY,
+timestamp int NOT NULL,
+state text CHECK(state IN ('WAITING','COMPLETE','ERRONEOUS','PARSED') ) NOT NULL);
 
 DROP TABLE IF EXISTS nodes;
 CREATE TABLE nodes
@@ -27,8 +33,3 @@ node_id int NOT NULL,
 parsed_result text,
 PRIMARY KEY (site_id,node_id));
 
-DROP TABLE IF EXISTS processing_state;
-CREATE TABLE processing_state
-(site_id int NOT NULL PRIMARY KEY,
-timestamp int NOT NULL,
-state text CHECK(state IN ('WAITING','COMPLETE','ERRONEOUS','PARSED','PROCESSED') ) NOT NULL);

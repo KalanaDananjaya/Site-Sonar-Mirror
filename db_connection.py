@@ -24,12 +24,27 @@ def initialize_db(database_file):
     conn = get_connection(database_file)
     with open (SQL_FILE,'r') as f:
         sql = f.read()
-        conn.executescript(sql)
-        conn.commit()
+        try:
+            conn.executescript(sql)
+            conn.commit()
+        except sqlite3.Error as error:
+            logging.exception("Error while connecting to database: %s", error)
 
 def clear_db(database_file):
     if os.path.exists(database_file): 
         os.remove(database_file) 
+
+def clear_tables(database_file):
+    conn = get_connection(DATABASE_FILE)
+    try:
+        conn.execute(DELETE_NODES)
+        conn.execute(DELETE_JOBS)
+        conn.execute(DELETE_PROCESSING_STATE)
+        conn.execute(DELETE_PARSED_OUTPUTS)
+        conn.commit()
+    except sqlite3.Error as error:
+        logging.exception("Error while executing the query: %s", error)
+
 
 # Site Related Functions
 def get_sites():
@@ -63,6 +78,7 @@ def get_site_ids():
 
 def add_sites_from_csv(csv_filename):
     conn = get_connection(DATABASE_FILE)
+    current_time = datetime.datetime.now()
     site_tuples = []
     sitenames = get_sitenames()
     with open(csv_filename, newline='') as csvfile:
@@ -80,11 +96,19 @@ def add_sites_from_csv(csv_filename):
                 else:
                     num_nodes = int(num_nodes)
                 normalized_name = normalize_ce_name(current_site_name)
-                site_tuples.append((current_site_name, normalized_name, num_nodes, ''))
+                site_tuples.append((current_site_name, normalized_name, num_nodes, current_time))
                 logging.debug('Adding %s to the database', current_site_name)
     conn.executemany(ADD_SITE, site_tuples)
     conn.commit()
     logging.debug("Total number of sites added : %s", conn.total_changes)
+
+def update_site_last_update_time(site_id):
+    current_time = datetime.datetime.now()
+    conn = get_connection(DATABASE_FILE)
+    try:
+        cursor = conn.execute(UPDATE_LAST_SITE_UPDATE_TIME,[current_time,site_id])
+    except sqlite3.Error as error:
+        logging.exception("Error while executing the query: %s", error)
                 
 
 def check_sitename_exists(sitenames,current_site_name):
@@ -131,10 +155,6 @@ def get_normalized_name_by_siteid(site_id):
         logging.debug ('Normalized name of site %s: %s',str(site_id),normalized_name)
         return normalized_name
 
-# Not tested
-def get_siteid_by_name(site_name):
-    conn = get_connection(DATABASE_FILE)
-    cursor = conn.execute(GET_SITEID_BY_NAME,[site_name])
 
 # Node related functions
 def get_nodeid_by_node_name(site_id,node_name):
@@ -217,8 +237,9 @@ def initialize_processing_state():
 
 def update_processing_state(site_id,state):
     conn = get_connection(DATABASE_FILE)
+    timestamp = datetime.datetime.now()
     try:
-        cursor = conn.execute(UPDATE_PROCESSING_STATE,[state,site_id])
+        cursor = conn.execute(UPDATE_PROCESSING_STATE,[state,timestamp,site_id])
         conn.commit()
         logging.debug('Updated processing state of site %s to %s successfully',site_id,state)
     except sqlite3.Error as error:
