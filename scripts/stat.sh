@@ -7,7 +7,7 @@
 # echo -----<Next Section Title>-----
 # 
 # Make sure only commands with single line outputs are used
-# Make sure same number of 5 hyphens are used before and after a title
+# Make sure 5 hyphens are used before and after a title
 
 echo -----Host-----
 echo Uname: $(uname -a)

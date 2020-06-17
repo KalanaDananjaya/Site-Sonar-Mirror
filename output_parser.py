@@ -3,7 +3,9 @@ import shutil
 import json
 import logging
 
-from db_connection import get_siteid_by_normalized_name, get_nodeid_by_node_name, add_parsed_output_by_names, delete_parsed_outputs,initialize_processing_state, update_processing_state_by_sitename
+from db_connection import get_siteid_by_normalized_name, get_nodeid_by_node_name, \
+    add_parsed_output_by_names, delete_parsed_outputs,initialize_processing_state, \
+    update_processing_state_by_sitename
 
 def process_section(section_array):
     section_title = section_array[0].replace('-----','').strip()
@@ -11,10 +13,6 @@ def process_section(section_array):
     section = {}
     section.update({'title':section_title})
     data = {}
-    if len(section_array) > 1:
-        section.update({'mulitple_lines': True})
-    elif len(section_array) == 1:
-        section.update({'mulitple_lines': False})
     for line in section_array:
         # Ignore the comments
         line = line.split('#',1)[0]
