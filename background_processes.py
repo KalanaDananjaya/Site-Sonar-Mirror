@@ -160,7 +160,6 @@ def job_monitor():
 def job_parser():
     """
     Parse the results of jobs in completed Grid sites
-
     """
     command = 'alien.py cp -r -T 32 -glob "{}*" alien:{}/{}/ file:{}/{}'
     while True:

@@ -3,10 +3,11 @@ ADD_SITE = 'INSERT INTO SITES (site_name,normalized_name,num_nodes,last_update) 
 GET_SITES = 'SELECT * FROM sites'
 GET_SITENAMES = 'SELECT site_name FROM sites'
 GET_SITE_IDS = 'SELECT site_id FROM sites'
-GET_SITEID_BY_NAME = 'SELECT site_id FROM sites where site_id = (?)'
-GET_SITEID_BY_NORMALIZED_NAME = 'SELECT site_id FROM sites where normalized_name = (?)'
-GET_NORMALIZED_NAME_BY_SITE_ID = 'SELECT normalized_name FROM sites where site_id = (?)'
-UPDATE_LAST_SITE_UPDATE_TIME = 'UPDATE sites set last_update = (?) where site_id = (?)'
+GET_SITEID_BY_NAME = 'SELECT site_id FROM sites WHERE site_id = (?)'
+GET_SITEID_BY_NORMALIZED_NAME = 'SELECT site_id FROM sites WHERE normalized_name = (?)'
+GET_NORMALIZED_NAME_BY_SITE_ID = 'SELECT normalized_name FROM sites WHERE site_id = (?)'
+GET_NUM_NODES_IN_SITE = 'SELECT num_nodes FROM site WHERE site_id = (?)'
+UPDATE_LAST_SITE_UPDATE_TIME = 'UPDATE sites set last_update = (?) WHERE site_id = (?)'
 
 ADD_NODE = 'INSERT INTO nodes (site_id,node_name) VALUES (?, ?)'
 GET_NODEID_BY_NODE_NAME = 'SELECT node_id FROM nodes WHERE site_id = (?) and node_name = (?)'
@@ -25,4 +26,5 @@ UPDATE_PROCESSING_STATE = 'UPDATE processing_state SET state = (?),timestamp = (
 DELETE_PROCESSING_STATE = 'DELETE FROM processing_state'
 
 ADD_PARSED_OUTPUT = 'INSERT INTO parsed_outputs (site_id,node_id,parsed_result) VALUES (?, ?, ?)'
+GET_PARSED_OUTPUT_BY_SITEID = 'SELECT * FROM parsed_outputs WHERE site_id = (?)'
 DELETE_PARSED_OUTPUTS = 'DELETE FROM parsed_outputs'

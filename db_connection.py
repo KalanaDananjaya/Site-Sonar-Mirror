@@ -129,6 +129,15 @@ def get_sitenames():
         sitenames.append(row[0])
     return sitenames
 
+def get_num_nodes_in_site(site_id):
+    conn = get_connection(DATABASE_FILE)
+    try:
+        cursor = conn.execute(GET_NUM_NODES_IN_SITE,[site_id])
+        for row in cursor:
+            return row[0]
+    except sqlite3.Error as error:
+        logging.exception("Error while executing the query: %s", error)
+
 def get_siteid_by_normalized_name(normalized_name):
     logging.debug('Searching id for %s...', normalized_name)
     conn = get_connection(DATABASE_FILE)
@@ -200,6 +209,21 @@ def add_parsed_output_by_names(normalized_site_name,node_name,parsed_result):
         logging.debug ('Assigned Node Id %s to %s of site %s',node_id,node_name,site_id)
         add_parsed_output(site_id,node_id,parsed_result)
     return True
+
+def get_parsed_output_by_siteid(site_id):
+    try:
+        conn = get_connection(DATABASE_FILE)
+        site_outputs = {}
+        cursor = conn.execute(GET_PARSED_OUTPUT_BY_SITEID,[site_id])
+        for row in cursor:
+            node_id = row[1]
+            output = row[2]
+            #print(node_id,output)
+            site_outputs.update({node_id:output})
+        print (site_outputs)
+        return site_outputs
+    except sqlite3.Error as error:
+        logging.exception("Error while executing the query: %s", error)
 
 def delete_parsed_outputs():
     conn = get_connection(DATABASE_FILE)

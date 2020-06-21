@@ -4,7 +4,7 @@ import argparse,shlex,os,shutil,logging,time
 from subprocess import Popen,PIPE, CalledProcessError
 from multiprocessing import Process, set_start_method
 
-from db_connection import add_sites_from_csv,initialize_db, clear_db, clear_tables
+from db_connection import add_sites_from_csv,initialize_db, clear_db, clear_tables, get_parsed_output_by_siteid, get_num_nodes_in_site
 from output_parser import parse_output_directory,clear_output_dir
 from config import *
 from background_processes import job_submission, job_monitor, job_parser, clear_grid_output_dir
@@ -67,15 +67,34 @@ def parse_output(args):
     parsed = parse_output_directory('outputs')
     
 def submit_and_monitor(args):
-    grid_home = GRID_USER_HOME 
-    jdl_name = JOB_TEMPLATE_NAME
     if args.submit:
-        job_submission(grid_home,jdl_name)
-    monitor = Process(target=job_monitor)
-    monitor.start()
-    time.sleep(SLEEP_BETWEEN_MONITOR_AND_PARSER)
-    job_parser()
-    monitor.join()
+        job_submission(GRID_USER_HOME,JOB_TEMPLATE_NAME)
+    parser = Process(target=job_parser)
+    parser.start()
+    job_monitor()
+    parser.join()
+    logging.INFO('Grid site data collection process complete.')
+
+def search(args):
+    query = args.query
+    site_id = args.site_id
+    supported_sites = 0
+    outputs = get_parsed_output_by_siteid(site_id)
+    for output in outputs:
+        print (output) #3 #THIS IS KEY
+        for section in output['sections']:
+            print (section)
+            for key_val_pair in section['data']:
+                if key_val_pair == query:
+                    supported_sites += 1
+                    continue
+    collected_nodes = len(outputs)
+    total_nodes = get_num_nodes_in_site(site_id)
+    coverage = collected_nodes / total_nodes
+    supported = supported_sites / total_nodes
+    logging.info('%f of the site matches the query',supported)
+
+
 
 def get_log_lvl(lvl):
     levels = {
@@ -116,6 +135,11 @@ parse_outputs_parser.set_defaults(func=parse_output)
 background_parser = subparsers.add_parser('bg')
 background_parser.add_argument('-s','--submit',action='store_true', help='Enable job submission')
 background_parser.set_defaults(func=submit_and_monitor)
+
+search_parser = subparsers.add_parser('search')
+search_parser.add_argument('-q','--query',help='Key value pair to search')
+search_parser.add_argument('-sid','--site_id', help = 'ID of the Grid site')
+search_parser.set_defaults(func=search)
 
 reset_parser = subparsers.add_parser('reset')
 reset_parser.set_defaults(func=reset)
