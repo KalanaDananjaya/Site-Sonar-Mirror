@@ -14,8 +14,8 @@ from background_processes import job_submission, job_monitor, job_parser, clear_
 def init(args):
     clear_grid_output_dir()
     clear_output_dir(OUTPUT_FOLDER) 
-    clear_db(DATABASE_FILE)
-    initialize_db(DATABASE_FILE)
+    clear_db()
+    initialize_db()
     add_sites_from_csv(SITES_CSV_FILE)
     logging.info('Database initialized using %s file',SITES_CSV_FILE)
 
@@ -23,7 +23,7 @@ def reset(args):
     clear_grid_output_dir()
     clear_output_dir(OUTPUT_FOLDER)
     # A workaround should be used to retain the parsed outputs while a run is going
-    clear_tables(DATABASE_FILE)
+    clear_tables()
     logging.info('Fresh environment started for a new run')
 
 
@@ -52,7 +52,7 @@ def fetch_results(args):
         shutil.rmtree(absPath)
         os.mkdir(absPath)
     logging.info('Downloading the results to  %s ',absPath) 
-    command = 'alien_cp -r -T 32 alien:{}/{}/ file:{}'.format(GRID_USER_HOME,GRID_SITE_SONAR_OUTPUT_DIR,OUTPUT_FOLDER)
+    command = 'alien.py cp -r -T 32 alien:{}/{}/ file:{}'.format(GRID_USER_HOME,GRID_SITE_SONAR_OUTPUT_DIR,OUTPUT_FOLDER)
     with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
         for line in p.stdout:
             logging.info('> %s ',line) 
@@ -83,7 +83,6 @@ def search(args):
     supported_sites = 0
     outputs = get_parsed_output_by_siteid(site_id)
     for node_id in outputs:
-        print ('node id is', node_id) #3 #THIS IS KEY
         output = json.loads(outputs[node_id])
         for section in output['sections']:
             print (section)
@@ -99,7 +98,24 @@ def search(args):
     supported = supported_sites // total_nodes
     logging.info('%d sites out of total %d sites matches the query',supported,total_nodes)
 
-
+def abort(args):
+    job_ids = None
+    if args.all:
+        job_ids = get_all_job_ids_by_abs_state('STARTED')
+        job_ids = ','.join(job_ids)
+    if args.job_id:
+        job_ids = args.job_id
+    
+    if job_ids:
+        command = 'alien.py kill {}'.format(job_ids)
+        with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
+            for line in p.stdout:
+                logging.debug('> %s ',line) 
+            logging.info ('Jobs killed succesfully')
+        if p.returncode != 0:
+            raise CalledProcessError(p.returncode, p.args)
+    else:
+        logging.info('No Job IDs were given to kill or failed to retrieve the Job IDs from the database')
 
 def get_log_lvl(lvl):
     levels = {
@@ -146,6 +162,11 @@ search_parser.add_argument('-q','--query',help='Key value pair to search')
 search_parser.add_argument('-sid','--site_id', help = 'ID of the Grid site')
 search_parser.add_argument('-st','--section.title', help = 'Title of the section')
 search_parser.set_defaults(func=search)
+
+abort_parser = subparsers.add_parser('kill')
+abort_parser.add_argument('-id','--job_id',help='Comma separated job IDs to kill')
+abort_parser.add_argument('-a','--all',action='store_true' help = 'Kill all the running jobs')
+abort_parser.set_defaults(func=abort)
 
 reset_parser = subparsers.add_parser('reset')
 reset_parser.set_defaults(func=reset)

@@ -16,6 +16,7 @@ DELETE_NODES = 'DELETE FROM nodes'
 ADD_JOBS = 'INSERT INTO jobs (job_id,site_id,timestamp,abstract_state,state) VALUES (?, ?, ?, ?, ?)'
 GET_JOBS_BY_SITEID = 'SELECT * FROM jobs WHERE site_id = (?)'
 GET_INCOMPLETE_JOBS_BY_SITEID = 'SELECT * FROM jobs WHERE site_id = (?) AND abstract_state = (?)'
+GET_ALL_JOB_IDS_BY_STATE = 'SELECT job_id FROM jobs WHERE abstract_state = (?)'
 UPDATE_JOB = 'UPDATE jobs SET timestamp=(?),abstract_state=(?),state=(?) WHERE job_id=(?)'
 DELETE_JOBS = 'DELETE FROM jobs'
 
