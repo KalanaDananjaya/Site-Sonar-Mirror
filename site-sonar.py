@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import argparse,shlex,os,shutil,logging,time
+import argparse,shlex,os,shutil,logging,json
 from subprocess import Popen,PIPE, CalledProcessError
-from multiprocessing import Process, set_start_method
+from multiprocessing import Process
 
 from db_connection import add_sites_from_csv,initialize_db, clear_db, clear_tables, get_parsed_output_by_siteid, get_num_nodes_in_site
 from output_parser import parse_output_directory,clear_output_dir
@@ -76,23 +76,28 @@ def submit_and_monitor(args):
     logging.INFO('Grid site data collection process complete.')
 
 def search(args):
-    query = args.query
+    query = args.query.split(':')
+    query_key = query[0].strip()
+    query_value = query[1].strip()
     site_id = args.site_id
     supported_sites = 0
     outputs = get_parsed_output_by_siteid(site_id)
-    for output in outputs:
-        print (output) #3 #THIS IS KEY
+    for node_id in outputs:
+        print ('node id is', node_id) #3 #THIS IS KEY
+        output = json.loads(outputs[node_id])
         for section in output['sections']:
             print (section)
-            for key_val_pair in section['data']:
-                if key_val_pair == query:
-                    supported_sites += 1
-                    continue
+            current_section = section['data']
+            for key in current_section:
+                if key == query_key:
+                    if current_section[key] == query_value:
+                        supported_sites += 1
+
     collected_nodes = len(outputs)
     total_nodes = get_num_nodes_in_site(site_id)
     coverage = collected_nodes / total_nodes
-    supported = supported_sites / total_nodes
-    logging.info('%f of the site matches the query',supported)
+    supported = supported_sites // total_nodes
+    logging.info('%d sites out of total %d sites matches the query',supported,total_nodes)
 
 
 
@@ -139,6 +144,7 @@ background_parser.set_defaults(func=submit_and_monitor)
 search_parser = subparsers.add_parser('search')
 search_parser.add_argument('-q','--query',help='Key value pair to search')
 search_parser.add_argument('-sid','--site_id', help = 'ID of the Grid site')
+search_parser.add_argument('-st','--section.title', help = 'Title of the section')
 search_parser.set_defaults(func=search)
 
 reset_parser = subparsers.add_parser('reset')

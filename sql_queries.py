@@ -6,7 +6,7 @@ GET_SITE_IDS = 'SELECT site_id FROM sites'
 GET_SITEID_BY_NAME = 'SELECT site_id FROM sites WHERE site_id = (?)'
 GET_SITEID_BY_NORMALIZED_NAME = 'SELECT site_id FROM sites WHERE normalized_name = (?)'
 GET_NORMALIZED_NAME_BY_SITE_ID = 'SELECT normalized_name FROM sites WHERE site_id = (?)'
-GET_NUM_NODES_IN_SITE = 'SELECT num_nodes FROM site WHERE site_id = (?)'
+GET_NUM_NODES_IN_SITE = 'SELECT num_nodes FROM sites WHERE site_id = (?)'
 UPDATE_LAST_SITE_UPDATE_TIME = 'UPDATE sites set last_update = (?) WHERE site_id = (?)'
 
 ADD_NODE = 'INSERT INTO nodes (site_id,node_name) VALUES (?, ?)'

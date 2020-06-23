@@ -4,7 +4,7 @@ import datetime
 import logging
 import os
 
-from config import SQL_FILE,DATABASE_FILE, JOB_STATES
+from config import SQL_FILE,DATABASE_FILE
 from sql_queries import *
 
 
@@ -218,9 +218,7 @@ def get_parsed_output_by_siteid(site_id):
         for row in cursor:
             node_id = row[1]
             output = row[2]
-            #print(node_id,output)
             site_outputs.update({node_id:output})
-        print (site_outputs)
         return site_outputs
     except sqlite3.Error as error:
         logging.exception("Error while executing the query: %s", error)
