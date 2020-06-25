@@ -65,6 +65,7 @@ def clear_tables():
         conn.execute(DELETE_PROCESSING_STATE)
         conn.execute(DELETE_PARSED_OUTPUTS)
         conn.commit()
+        logging.debug('Database tables cleared')
     except sqlite3.Error as error:
         logging.exception("Error while executing the query: %s", error)
 
@@ -515,7 +516,7 @@ def get_all_job_ids_by_abs_state(abstract_state):
     """
     conn = get_connection(DATABASE_FILE)
     try:
-        cursor = conn.execute(GET_ALL_JOBS_BY_STATE,[abstract_state])
+        cursor = conn.execute(GET_ALL_JOB_IDS_BY_STATE,[abstract_state])
         job_ids = []
         for row in cursor:
             job_ids.append(row[0])

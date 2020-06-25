@@ -4,7 +4,7 @@ import argparse,shlex,os,shutil,logging,json
 from subprocess import Popen,PIPE, CalledProcessError
 from multiprocessing import Process
 
-from db_connection import add_sites_from_csv,initialize_db, clear_db, clear_tables, get_parsed_output_by_siteid, get_num_nodes_in_site
+from db_connection import add_sites_from_csv,initialize_db, clear_db, clear_tables, get_parsed_output_by_siteid, get_num_nodes_in_site, get_all_job_ids_by_abs_state
 from output_parser import parse_output_directory,clear_output_dir
 from config import *
 from background_processes import job_submission, job_monitor, job_parser, clear_grid_output_dir
@@ -102,10 +102,9 @@ def abort(args):
     job_ids = None
     if args.all:
         job_ids = get_all_job_ids_by_abs_state('STARTED')
-        job_ids = ','.join(job_ids)
+        job_ids = ' '.join(map(str,job_ids))
     if args.job_id:
-        job_ids = args.job_id
-    
+        job_ids = args.job_id 
     if job_ids:
         command = 'alien.py kill {}'.format(job_ids)
         with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
@@ -165,7 +164,7 @@ search_parser.set_defaults(func=search)
 
 abort_parser = subparsers.add_parser('kill')
 abort_parser.add_argument('-id','--job_id',help='Comma separated job IDs to kill')
-abort_parser.add_argument('-a','--all',action='store_true' help = 'Kill all the running jobs')
+abort_parser.add_argument('-a','--all',action='store_true',help ='Kill all the running jobs')
 abort_parser.set_defaults(func=abort)
 
 reset_parser = subparsers.add_parser('reset')
