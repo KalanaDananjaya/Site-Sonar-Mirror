@@ -38,7 +38,7 @@ def initialize_db():
         DATABASE_FILE (str): Name of the SQLite DB file, set from config
         SQL_FILE(str): Set from config
     """
-    conn = get_connection(database_file)
+    conn = get_connection(DATABASE_FILE)
     with open (SQL_FILE,'r') as f:
         sql = f.read()
         try:

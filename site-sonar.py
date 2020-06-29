@@ -4,10 +4,11 @@ import argparse,shlex,os,shutil,logging,json
 from subprocess import Popen,PIPE, CalledProcessError
 from multiprocessing import Process
 
-from db_connection import add_sites_from_csv,initialize_db, clear_db, clear_tables, get_parsed_output_by_siteid, get_num_nodes_in_site, get_all_job_ids_by_abs_state
+from db_connection import add_sites_from_csv,initialize_db, clear_db, clear_tables, \
+    get_parsed_output_by_siteid, get_num_nodes_in_site, get_all_job_ids_by_abs_state
 from output_parser import parse_output_directory,clear_output_dir
 from config import *
-from background_processes import job_submission, job_monitor, job_parser, clear_grid_output_dir
+from processes import job_submission, job_monitor, job_parser, clear_grid_output_dir, search_results
 
 
 # CLI Functions
@@ -38,15 +39,14 @@ def stage_jobs(args):
 
 
 def submit_jobs(args):
-    grid_home = GRID_USER_HOME 
     jdl_name = JOB_TEMPLATE_NAME
-    job_submission(grid_home,jdl_name) 
+    job_submission(jdl_name)
 
 def monitor_jobs(args):
     job_monitor()
 
 def fetch_results(args):
-    dirName = 'outputs'
+    dirName = RESULTS_DOWNLOAD_FOLDER
     absPath = os.getcwd() + '/' + dirName
     if os.path.exists(dirName):
         shutil.rmtree(absPath)
@@ -63,40 +63,21 @@ def parse_output(args):
     """
     Return True if all the files in the directory was parsed successfully
     """
-    logging.info('Output parsing started...') 
-    parsed = parse_output_directory('outputs')
+    logging.info('Job results parsing started...') 
+    parse_output_directory(RESULTS_DOWNLOAD_FOLDER)
+    logging.info('Job results parsing completed...')
     
 def submit_and_monitor(args):
     if args.submit:
-        job_submission(GRID_USER_HOME,JOB_TEMPLATE_NAME)
+        job_submission(JOB_TEMPLATE_NAME)
     parser = Process(target=job_parser)
     parser.start()
     job_monitor()
     parser.join()
-    logging.INFO('Grid site data collection process complete.')
+    logging.info('Grid site data collection process complete.')
 
 def search(args):
-    query = args.query.split(':')
-    query_key = query[0].strip()
-    query_value = query[1].strip()
-    site_id = args.site_id
-    supported_sites = 0
-    outputs = get_parsed_output_by_siteid(site_id)
-    for node_id in outputs:
-        output = json.loads(outputs[node_id])
-        for section in output['sections']:
-            print (section)
-            current_section = section['data']
-            for key in current_section:
-                if key == query_key:
-                    if current_section[key] == query_value:
-                        supported_sites += 1
-
-    collected_nodes = len(outputs)
-    total_nodes = get_num_nodes_in_site(site_id)
-    coverage = collected_nodes / total_nodes
-    supported = supported_sites // total_nodes
-    logging.info('%d sites out of total %d sites matches the query',supported,total_nodes)
+    search_results(args.query,args.site_id)
 
 def abort(args):
     job_ids = None

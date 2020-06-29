@@ -1,10 +1,11 @@
 # User specific configs
-GRID_USER_HOME = '/alice/cern.ch/user/k/kwijethu'
-JOB_TEMPLATE_NAME = 'job_template.jdl'
-JOB_FACTOR = 2
+GRID_USER_HOME = '/alice/cern.ch/user/k/kwijethu'   # Path to user's Grid Home directory
+JOB_TEMPLATE_NAME = 'job_template.jdl'              # Name of the Job template listed in JDL/ folder
+JOB_FACTOR = 2                                      # Factor of jobs to submit relative to the number of nodes in the Grid site
+RESULTS_DOWNLOAD_FOLDER = 'outputs'                     # Relative to root directory of the repository
 
 # Database configs
-DATABASE_FILE = 'site-sonar-db.db'
+DATABASE_FILE = 'site-sonar-db.db' 
 SQL_FILE = 'db.sql'
 
 # General configs

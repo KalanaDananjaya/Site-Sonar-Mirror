@@ -1,24 +1,24 @@
 import time
-import datetime
-import logging
 import shlex
-import os
+import json
 import re
 from dateutil import parser as dateparser
 from subprocess import Popen,PIPE, CalledProcessError
-import multiprocessing
 
 from config import *
 from db_connection import *
 from output_parser import parse_output_directory
 
+
 # Utils
 def escape_string(string):
     return re.sub(r'\x1b(\[.*?[@-~]|\].*?(\x07|\x1b\\))', '', string)
 
+
 def get_grid_output_dir(base, normalized_name, _id):
     out_dir = base + '/' + normalized_name + "_" + str(_id)
     return os.path.join(out_dir)
+
 
 def clear_grid_output_dir():
     """ 
@@ -38,12 +38,13 @@ def clear_grid_output_dir():
         logging.info('Grid output folder cleared succesfully')
 
 
-def job_submission(grid_home,jdl_name):
+def job_submission(jdl_name):
     """ 
     Submit JOB FACTOR number of jobs per each Grid site
 
     Args:
-        grid_home (str): Path to User Grid Home Directory
+        GRID_USER_HOME (str): Path to User Grid Home Directory defined in config
+        GRID_USER_HOME (str):Path to User Site sonar Directory defined in config
         jdl_name (str): Name of the JDL file in the /JDL directory
 
     """
@@ -100,7 +101,7 @@ def job_monitor():
                     + get_jobs_by_siteid_and_abs_state(site_id,'STALLED')
                 try:
                     completed_job_ratio = len(completed_jobs)/(len(pending_jobs)+len(completed_jobs))
-                    logging.debug ('Job completion ratio of site %s: %s',site_id, completed_job_ratio)
+                    logging.info ('Job completion ratio of site %s: %s',site_id, completed_job_ratio)
                     errorneous_job_ratio = len(erroneous_jobs)/len(completed_jobs)
                 except ZeroDivisionError:
                     completed_job_ratio = 0
@@ -183,4 +184,29 @@ def job_parser():
                 update_processing_state(site_id,'PARSED')
                 logging.info('Site %s marked as PARSED',site_id)
         time.sleep(SLEEP_BETWEEN_PARSER_PINGS)
-    
+
+
+def search_results(query,site_id):
+    query = query.split(':')
+    query_key = query[0].strip()
+    query_value = query[1].strip()
+    supported_sites = 0
+    outputs = get_parsed_output_by_siteid(site_id)
+    # result_dicts = []
+    for node_id in outputs:
+        output = json.loads(outputs[node_id])
+        # result_dicts.append(output)
+        for section in output['sections']:
+            current_section = section['data']
+            for key in current_section:
+                if key == query_key:
+                    if current_section[key] == query_value:
+                        supported_sites += 1
+
+    collected_nodes = len(outputs)
+    total_nodes = get_num_nodes_in_site(site_id)
+    coverage = collected_nodes / total_nodes
+    supported = supported_sites // total_nodes
+    logging.info('%d sites out of total %d sites matches the query', supported, total_nodes)
+    return total_nodes,coverage,supported
+
