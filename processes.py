@@ -43,9 +43,9 @@ def job_submission(jdl_name):
     Submit JOB FACTOR number of jobs per each Grid site
 
     Args:
-        GRID_USER_HOME (str): Path to User Grid Home Directory defined in config
-        GRID_USER_HOME (str):Path to User Site sonar Directory defined in config
-        jdl_name (str): Name of the JDL file in the /JDL directory
+        GRID_USER_HOME (str):       Path to User Grid Home Directory defined in config
+        GRID_SITE_SONAR_HOME (str): Path to User Site sonar Directory defined in config
+        jdl_name (str):             Name of the JDL file in the /JDL directory
 
     """
     site_details = get_sites()
@@ -55,15 +55,16 @@ def job_submission(jdl_name):
     for site in site_details:
         num_jobs = JOB_FACTOR * site['num_nodes']+1
         jobs = []
-        logging.info('Submitting %s jobs to the Grid site %s',str(num_jobs - 1), site['site_name'])
+        sitename = site['site_name']
+        logging.info('Submitting %s jobs to the Grid site %s',str(num_jobs - 1), sitename)
         for i in range(1, num_jobs):
             output_dir = get_grid_output_dir(GRID_SITE_SONAR_OUTPUT_DIR, site['normalized_name'], i)
             site_sonar_dir = GRID_USER_HOME + '/' + GRID_SITE_SONAR_HOME
             logging.debug('Job path: %s',job_path)
-            logging.debug('Base dir: %s',site_sonar_dir)
-            logging.debug('Site name: %s',site['site_name'])
-            logging.debug('Output dir:  %s',output_dir)
-            command='alien.py submit {} {} {} {}'.format(job_path, site_sonar_dir, site['site_name'], output_dir)
+            logging.debug('Site sonar dir($1): %s',site_sonar_dir)
+            logging.debug('Site name($2): %s',sitename)
+            logging.debug('Output dir($3):  %s',output_dir)
+            command='alien.py submit {} {} {} {}'.format(job_path, site_sonar_dir, sitename, output_dir)
             with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
                 for line in p.stdout:
                     logging.debug('> %s ',line.rstrip()) 
@@ -80,7 +81,6 @@ def job_monitor():
     """
     Monitor the state of the jobs running in the Grid.
     Monitor Grid site coverage
-
     """
     command = 'alien.py ps -j {}'
     while True:

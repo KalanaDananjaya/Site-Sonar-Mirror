@@ -80,13 +80,37 @@ def search(args):
     search_results(args.query,args.site_id)
 
 def abort(args):
-    job_ids = None
+    # Kill all jobs
     if args.all:
-        job_ids = get_all_job_ids_by_abs_state('STARTED')
-        job_ids = ' '.join(map(str,job_ids))
-    if args.job_id:
+        started_job_ids = get_all_job_ids_by_abs_state('STARTED')
+        stalled_job_ids = get_all_job_ids_by_abs_state('STALLED')
+        job_ids = started_job_ids + stalled_job_ids
+        num_jobs = len(job_ids)
+        start = 0
+        end = 500
+        while True:
+            logging.debug('Start killing %d number of jobs...',num_jobs)
+            if (end > num_jobs):
+                end = num_job
+            job_ids_slice = job_ids[start:end]
+            job_ids_slice_string = ' '.join(map(str,job_ids_slice))
+            command = 'alien.py kill {}'.format(job_ids)
+            with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
+                for line in p.stdout:
+                    logging.debug('> %s ',line) 
+                logging.debug ('%d number of jobs killed',len(job_ids_slice))
+            if p.returncode != 0:
+                raise CalledProcessError(p.returncode, p.args)
+            if end == num_jobs:
+                logging.info ('Total %d jobs killed succesfully',num_jobs)
+                break
+            else:
+                start += 500
+                end += 500
+            
+    # Kill jobs with given ids
+    elif args.job_id:
         job_ids = args.job_id 
-    if job_ids:
         command = 'alien.py kill {}'.format(job_ids)
         with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
             for line in p.stdout:
