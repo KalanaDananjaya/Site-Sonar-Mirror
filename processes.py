@@ -67,6 +67,7 @@ def job_submission(jdl_name):
             command='alien.py submit {} {} {} {}'.format(job_path, site_sonar_dir, sitename, output_dir)
             logging.info(command)
             with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
+                logging.info(shlex.split(command))
                 for line in p.stdout:
                     logging.debug('> %s ',line.rstrip()) 
                     if ("Your new job ID is" in line):
