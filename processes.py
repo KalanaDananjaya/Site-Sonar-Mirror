@@ -65,6 +65,7 @@ def job_submission(jdl_name):
             logging.debug('Site name($2): %s',sitename)
             logging.debug('Output dir($3):  %s',output_dir)
             command='alien.py submit {} {} {} {}'.format(job_path, site_sonar_dir, sitename, output_dir)
+            logging.info(command)
             with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
                 for line in p.stdout:
                     logging.debug('> %s ',line.rstrip()) 
