@@ -209,6 +209,6 @@ def search_results(query,site_id):
     total_nodes = get_num_nodes_in_site(site_id)
     coverage = collected_nodes / total_nodes
     supported = supported_sites // total_nodes
-    logging.info('%d sites out of total %d sites matches the query', supported, total_nodes)
+    logging.info('%d nodes out of total %d nodes matches the query', supported, total_nodes)
     return total_nodes,coverage,supported
 
