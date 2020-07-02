@@ -31,7 +31,7 @@ def clear_grid_output_dir():
             logging.debug('> %s ',line.rstrip()) 
     if p.returncode != 0:
         if p.returncode == 5 :
-            logging.debug('Grid output directory does not exist. No need to clear')
+            logging.debug('Grid output directory does not exist. Skipping...')
         else:
             raise CalledProcessError(p.returncode, p.args)
     else:

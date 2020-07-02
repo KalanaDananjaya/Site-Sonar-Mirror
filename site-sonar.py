@@ -51,7 +51,7 @@ def fetch_results(args):
     if os.path.exists(dirName):
         shutil.rmtree(absPath)
         os.mkdir(absPath)
-    logging.info('Downloading the results to  %s ',absPath) 
+    logging.info('Downloading the results to %s',absPath) 
     command = 'alien.py cp -r -T 32 alien:{}/{}/ file:{}'.format(GRID_USER_HOME,GRID_SITE_SONAR_OUTPUT_DIR,OUTPUT_FOLDER)
     with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
         for line in p.stdout:
@@ -89,9 +89,9 @@ def abort(args):
         start = 0
         end = 500
         while True:
-            logging.debug('Start killing %d number of jobs...',num_jobs)
+            logging.debug('Started killing %d number of jobs...',num_jobs)
             if (end > num_jobs):
-                end = num_job
+                end = num_jobs
             job_ids_slice = job_ids[start:end]
             job_ids_slice_string = ' '.join(map(str,job_ids_slice))
             command = 'alien.py kill {}'.format(job_ids)

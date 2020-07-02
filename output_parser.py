@@ -73,8 +73,11 @@ def parse_init_section(init_section):
     return site_name, hostname
 
 def clear_output_dir(output_dir):
+    logging.debug('Clearing repo output directory..')
     if os.path.exists(output_dir): 
         shutil.rmtree(output_dir, ignore_errors=True)
+    else:
+        logging.debug('Repo output directory does not exist. Skipping...')
 
 def parse_output_directory(output_dir):
     try:
