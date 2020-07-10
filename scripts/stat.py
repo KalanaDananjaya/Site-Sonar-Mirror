@@ -2,12 +2,21 @@
 import os
 from subprocess import Popen,PIPE
 import time  
+import zipfile
 
 url = os.environ.get('APMON_CONFIG')
 jobId = os.environ.get('ALIEN_PROC_ID')
+hostname = os.environ.get('ALIEN_HOSTNAME')
+os.getcwd()
+# with Popen('unzip apmon.zip', stdout=PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
+#     out = p.stdout
 
-with Popen('unzip apmon.zip', stdout=PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
-    out = p.stdout
+with zipfile.ZipFile('apmon.zip', 'r') as zip_ref:
+    zip_ref.extractall('./')
+
+with Popen('ls', stdout=PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
+    for line in p.stdout:
+        print (line)
 
 import apmon
 
@@ -41,15 +50,17 @@ else:
 
 # you can put as many pairs of parameter_name, parameter_value as you want
 # but be careful not to create packets longer than 8K.
-for key in monitors.keys():
-    command = monitors[key]
-    value = ''
-    with Popen(command, stdout=PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
-        print (command)
-        for line in p.stdout:
-            value += line
-        print (value)
-    apm.sendParameters("SiteSonar", jobId , {str(key): str(value)})
-    time.sleep(.005)
+for i in range (10):
+    for key in monitors.keys():
+        command = monitors[key]
+        value = ''
+        with Popen(command, stdout=PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
+            print (command)
+            for line in p.stdout:
+                value += line
+            print (value)
+        apm.sendParameters("SiteSonar", jobId + "_" + hostname + "_" + str(i) , {str(key): str(value)})
+        time.sleep(.005)
+    time.sleep(10)
 
 print("Job Completed")

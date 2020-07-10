@@ -453,24 +453,42 @@ def get_processing_state_siteids_by_state(state):
         logging.exception("Error while executing the query: %s", error)
 
 # Job related functions
-def add_job_batch(jobs,site_id):
+
+def add_job(job_id,site_id):
     """
-    Add jobs of same site batch wise to the database
+    Add jobs to the database
 
     Args:
-        jobs (list): List of Job IDs
+        job_id (str): Job ID
         site_id (int)
     """
     timestamp = datetime.datetime.now()
-    job_tuples = []
-    for job_id in jobs:
-        job_tuples.append((job_id, site_id, timestamp, 'STARTED','W'))
+    job_tuple = (job_id, site_id, timestamp, 'STARTED')
     conn = get_connection(DATABASE_FILE)
     try:
-        conn.executemany(ADD_JOBS, job_tuples)
+        conn.executemany(ADD_JOB, [job_tuple])
         conn.commit()
     except sqlite3.Error as error:
         logging.exception("Error while executing the query: %s", error)
+
+# def add_job_batch(jobs,site_id):
+#     """
+#     Add jobs of same site batch wise to the database
+
+#     Args:
+#         jobs (list): List of Job IDs
+#         site_id (int)
+#     """
+#     timestamp = datetime.datetime.now()
+#     job_tuples = []
+#     for job_id in jobs:
+#         job_tuples.append((job_id, site_id, timestamp, 'STARTED','W'))
+#     conn = get_connection(DATABASE_FILE)
+#     try:
+#         conn.executemany(ADD_JOBS, job_tuples)
+#         conn.commit()
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
 
 def get_all_jobs_by_site_id(site_id):
     """
@@ -504,19 +522,19 @@ def get_all_jobs_by_site_id(site_id):
     except sqlite3.Error as error:
         logging.exception("Error while executing the query: %s", error)
 
-def get_all_job_ids_by_abs_state(abstract_state):
+def get_all_job_ids_by_state(state):
     """
     Get all jobs in the database with given abstract state
 
     Args:
-        abstract_state (enum): ('STARTED','ERROR','STALLED','FINISHED')
+        state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
 
     Returns:
         job_ids(list): Job IDs of jobs  in given abstract state
     """
     conn = get_connection(DATABASE_FILE)
     try:
-        cursor = conn.execute(GET_ALL_JOB_IDS_BY_STATE,[abstract_state])
+        cursor = conn.execute(GET_ALL_JOB_IDS_BY_STATE,[state])
         job_ids = []
         for row in cursor:
             job_ids.append(row[0])
@@ -524,55 +542,57 @@ def get_all_job_ids_by_abs_state(abstract_state):
     except sqlite3.Error as error:
         logging.exception("Error while executing the query: %s", error)
 
-def get_jobs_by_siteid_and_abs_state(site_id,abstract_state):
-    """
-    Get Job ID details of given site with given abstract state
+# def get_jobs_by_siteid_and_abs_state(site_id,abstract_state):
+#     """
+#     Get Job ID details of given site with given abstract state
 
-    Args:
-        site_id (int)
-        abstract_state (enum): ('STARTED','ERROR','STALLED','FINISHED')
+#     Args:
+#         site_id (int)
+#         abstract_state (enum): ('STARTED','ERROR','STALLED','FINISHED')
 
-    Returns:
-        jobs (dict): All job details of given site with given abstract state
-    """
-    conn = get_connection(DATABASE_FILE)
-    try:
-        cursor = conn.execute(GET_INCOMPLETE_JOBS_BY_SITEID,[site_id,abstract_state])
-        jobs = []
-        for row in cursor:
-            job_id = row[0]
-            site_id = row[1]
-            timestamp = row[2]
-            abstract_state = row[3]
-            state = row[4]
-            job = {
-                'job_id': job_id,
-                'site_id': site_id,
-                'timestamp': timestamp,
-                'abstract_state': abstract_state,
-                'state': state
-                }
-            jobs.append(job)  
-        return jobs
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+#     Returns:
+#         jobs (dict): All job details of given site with given abstract state
+#     """
+#     conn = get_connection(DATABASE_FILE)
+#     try:
+#         cursor = conn.execute(GET_INCOMPLETE_JOBS_BY_SITEID,[site_id,abstract_state])
+#         jobs = []
+#         for row in cursor:
+#             job_id = row[0]
+#             site_id = row[1]
+#             timestamp = row[2]
+#             abstract_state = row[3]
+#             state = row[4]
+#             job = {
+#                 'job_id': job_id,
+#                 'site_id': site_id,
+#                 'timestamp': timestamp,
+#                 'abstract_state': abstract_state,
+#                 'state': state
+#                 }
+#             jobs.append(job)  
+#         return jobs
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
 
-def update_job_states(job_id,abstract_state,state):
+def update_job_state_by_job_id(job_id,state):
     """
     Update state of the job
 
     Args:
-        job_id (int)
-        abstract_state (enum): ('STARTED','ERROR','STALLED','FINISHED')
-        state (enum): JAliEN state of the Job -
-        ('K','R','ST','D','DW','W','OW','I','S','SP','SV','SVD','ANY','ASG','AST','FM','IDL','INT','M',
-        'SW','ST','TST','EA','EE','EI','EIB','EM','ERE','ES','ESV','EV','EVN','EVT','ESP','EW','EVE',
-        'FF','Z','XP','UP','F','INC')
+        job_id (int): Single id or id list
+        state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
     """
     timestamp = datetime.datetime.now()
     conn = get_connection(DATABASE_FILE)
+    job_tuple = []
+    if type(job_id) == int:
+        job_tuple.append(timestamp,state,job_id)
+    elif type(job_id) == list: 
+        for id in job_id:
+            job_tuple.append((timestamp,state,id))
     try:
-        conn.execute(UPDATE_JOB, [timestamp,abstract_state,state,job_id])
+        conn.executemany(UPDATE_JOB_STATE_BY_JOBID, job_tuple)
         conn.commit()
     except sqlite3.Error as error:
         logging.exception("Error while executing the query: %s", error)
