@@ -7,7 +7,7 @@ from subprocess import Popen,PIPE, CalledProcessError
 
 from config import *
 from db_connection import *
-from output_parser import parse_output_directory
+#from output_parser import clear_output_dir
 
 
 # Utils

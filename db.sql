@@ -4,12 +4,12 @@ CREATE TABLE sites
 site_name text NOT NULL,
 normalized_name text NOT NULL,
 num_nodes int NOT NULL,
-last_update text);
+last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);
 
 DROP TABLE IF EXISTS processing_state;
 CREATE TABLE processing_state
 (site_id int NOT NULL PRIMARY KEY,
-timestamp int NOT NULL,
+last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 state ENUM ('WAITING','COMPLETE','ERRONEOUS','PARSED')  NOT NULL);
 
 DROP TABLE IF EXISTS nodes;
@@ -22,7 +22,7 @@ DROP TABLE IF EXISTS jobs;
 CREATE TABLE jobs
 (job_id int NOT NULL PRIMARY KEY,
 site_id int NOT NULL,
-timestamp int NOT NULL,
+last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 job_state ENUM ('STARTED','ERROR', 'STALLED','COMPLETED','KILLED')  NOT NULL,
 node_id int,
 paramName text,
@@ -34,4 +34,3 @@ CREATE TABLE parsed_outputs
 node_id int NOT NULL,
 parsed_result text,
 PRIMARY KEY (site_id,node_id));
-

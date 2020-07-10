@@ -4,9 +4,8 @@ import argparse,shlex,os,shutil,logging,json
 from subprocess import Popen,PIPE, CalledProcessError
 from multiprocessing import Process
 
-from db_connection import add_sites_from_csv,initialize_db, clear_tables, \
-    get_parsed_output_by_siteid, get_all_job_ids_by_state, update_job_state_by_job_id
-from output_parser import parse_output_directory,clear_output_dir
+from db_connection import add_sites_from_csv,initialize_db, clear_tables
+from output_parser import clear_output_dir
 from config import *
 from processes import job_submission, clear_grid_output_dir, search_results
 

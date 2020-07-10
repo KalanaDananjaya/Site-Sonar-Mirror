@@ -1,11 +1,10 @@
-import sqlite3
 import csv 
 import datetime
 import time
 import logging
 import os
 
-from config import SQL_FILE,DATABASE_FILE
+from config import SQL_FILE
 from sql_queries import *
 
 import mysql.connector
@@ -143,10 +142,6 @@ def add_sites_from_csv(csv_filename):
     """
 
     cursor,conn = get_connection()
-
-    ts = time.time()
-    current_time = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-
     site_tuples = []
     sitenames = get_sitenames()
     with open(csv_filename, newline='') as csvfile:
@@ -164,7 +159,8 @@ def add_sites_from_csv(csv_filename):
                 else:
                     num_nodes = int(num_nodes)
                 normalized_name = normalize_ce_name(current_site_name)
-                site_tuples.append((current_site_name, normalized_name, num_nodes, current_time))
+                # site_tuples.append((current_site_name, normalized_name, num_nodes, current_time))
+                site_tuples.append((current_site_name, normalized_name, num_nodes))
                 logging.debug('Adding %s to the database', current_site_name)
     try:
         cursor.executemany(ADD_SITE, site_tuples)
@@ -186,10 +182,9 @@ def update_site_last_update_time(site_id):
     Args:
         site_id (int): Site ID
     """
-    current_time = datetime.datetime.now()
     cursor, conn = get_connection()
     try:
-        cursor.execute(UPDATE_LAST_SITE_UPDATE_TIME,[current_time,site_id])
+        cursor.execute(UPDATE_LAST_SITE_UPDATE_TIME,[site_id])
     except mysql.connector.Error as error:
         logging.error("Failed to update site last update times: {}".format(error))
     finally:
@@ -226,180 +221,187 @@ def get_sitenames():
     """
     cursor, conn = get_connection()
     sitenames=[]
-    cursor.execute(GET_SITENAMES)
-    results = cursor.fetchall()
-    for row in results:
-        sitenames.append(row[0])
-    return sitenames
+    try:
+        cursor.execute(GET_SITENAMES)
+        results = cursor.fetchall()
+        for row in results:
+            sitenames.append(row[0])
+        return sitenames
+    except mysql.connector.Error as error:
+        logging.error("Failed to get sitenames: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
 ########## UPDATED UPTO HERE
-def get_num_nodes_in_site(site_id):
-    """
-    Get the number of nodes in site
+# def get_num_nodes_in_site(site_id):
+#     """
+#     Get the number of nodes in site
 
-    Args:
-        site_id (int])
+#     Args:
+#         site_id (int])
 
-    Returns:
-        Number of nodes
-    """
-    conn = get_connection(DATABASE_FILE)
-    try:
-        cursor = conn.execute(GET_NUM_NODES_IN_SITE,[site_id])
-        for row in cursor:
-            return row[0]
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+#     Returns:
+#         Number of nodes
+#     """
+#     conn = get_connection(DATABASE_FILE)
+#     try:
+#         cursor = conn.execute(GET_NUM_NODES_IN_SITE,[site_id])
+#         for row in cursor:
+#             return row[0]
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
 
-def get_siteid_by_normalized_name(normalized_name):
-    """
-    Get Site ID by the normalized name
+# def get_siteid_by_normalized_name(normalized_name):
+#     """
+#     Get Site ID by the normalized name
 
-    Args:
-        normalized_name (str)
+#     Args:
+#         normalized_name (str)
 
-    Returns:
-        site_id
-    """
-    logging.debug('Searching id for %s...', normalized_name)
-    conn = get_connection(DATABASE_FILE)
-    try:
-        cursor = conn.execute(GET_SITEID_BY_NORMALIZED_NAME,[normalized_name])
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
-    rows = cursor.fetchall()
-    for row in rows:
-        site_id = row[0]
-        logging.debug ('Site_id of %s: %s',normalized_name, site_id)
-        return site_id
+#     Returns:
+#         site_id
+#     """
+#     logging.debug('Searching id for %s...', normalized_name)
+#     conn = get_connection(DATABASE_FILE)
+#     try:
+#         cursor = conn.execute(GET_SITEID_BY_NORMALIZED_NAME,[normalized_name])
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
+#     rows = cursor.fetchall()
+#     for row in rows:
+#         site_id = row[0]
+#         logging.debug ('Site_id of %s: %s',normalized_name, site_id)
+#         return site_id
 
-def get_normalized_name_by_siteid(site_id):
-    """
-    Get normalized name by Site ID
+# def get_normalized_name_by_siteid(site_id):
+#     """
+#     Get normalized name by Site ID
 
-    Args:
-        site_id (int)
+#     Args:
+#         site_id (int)
 
-    Returns:
-        normalized_name(str)
-    """
-    logging.debug('Searching normalized name for site with id: %s...', str(site_id))
-    conn = get_connection(DATABASE_FILE)
-    try:
-        cursor = conn.execute(GET_NORMALIZED_NAME_BY_SITE_ID,[site_id])
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
-    rows = cursor.fetchall()
-    for row in rows:
-        normalized_name = row[0]
-        logging.debug ('Normalized name of site %s: %s',str(site_id),normalized_name)
-        return normalized_name
+#     Returns:
+#         normalized_name(str)
+#     """
+#     logging.debug('Searching normalized name for site with id: %s...', str(site_id))
+#     conn = get_connection(DATABASE_FILE)
+#     try:
+#         cursor = conn.execute(GET_NORMALIZED_NAME_BY_SITE_ID,[site_id])
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
+#     rows = cursor.fetchall()
+#     for row in rows:
+#         normalized_name = row[0]
+#         logging.debug ('Normalized name of site %s: %s',str(site_id),normalized_name)
+#         return normalized_name
 
 
 # Node related functions
-def get_nodeid_by_node_name(site_id,node_name):
-    """
-    Get Node Id by Node Name
+# def get_nodeid_by_node_name(site_id,node_name):
+#     """
+#     Get Node Id by Node Name
 
-    Args:
-        site_id (int)
-        node_name (str): Name of the node
+#     Args:
+#         site_id (int)
+#         node_name (str): Name of the node
 
-    Returns:
-        node_id (int)
-    """
-    conn = get_connection(DATABASE_FILE)
-    try:
-        cursor = conn.execute(GET_NODEID_BY_NODE_NAME,[site_id, node_name])
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
-    rows = cursor.fetchall()
-    result_len = len(rows)
-    if result_len == 0:
-        logging.debug('Node does not exist')
-        return False
-    else:
-        for row in rows:
-            node_id = row[0]
-            return node_id
+#     Returns:
+#         node_id (int)
+#     """
+#     conn = get_connection(DATABASE_FILE)
+#     try:
+#         cursor = conn.execute(GET_NODEID_BY_NODE_NAME,[site_id, node_name])
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
+#     rows = cursor.fetchall()
+#     result_len = len(rows)
+#     if result_len == 0:
+#         logging.debug('Node does not exist')
+#         return False
+#     else:
+#         for row in rows:
+#             node_id = row[0]
+#             return node_id
 
-def add_node(site_id,node_name):
-    """
-    Add node to the database
+# def add_node(site_id,node_name):
+#     """
+#     Add node to the database
 
-    Args:
-        site_id (int)
-        node_name (str): Name of the node
+#     Args:
+#         site_id (int)
+#         node_name (str): Name of the node
 
-    Returns:
-        node_id (int): Generated Node ID
-    """
-    conn = get_connection(DATABASE_FILE)
-    try:
-        cursor = conn.execute(ADD_NODE,[site_id, node_name])
-        conn.commit()
-        node_id  = cursor.lastrowid
-        return node_id
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+#     Returns:
+#         node_id (int): Generated Node ID
+#     """
+#     conn = get_connection(DATABASE_FILE)
+#     try:
+#         cursor = conn.execute(ADD_NODE,[site_id, node_name])
+#         conn.commit()
+#         node_id  = cursor.lastrowid
+#         return node_id
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
 
 # Parsing related functions
-def add_parsed_output(site_id,node_id,parsed_result):
-    """
-    Add parsed output to the database
+# def add_parsed_output(site_id,node_id,parsed_result):
+#     """
+#     Add parsed output to the database
 
-    Args:
-        site_id (int)
-        node_id (int)
-        parsed_result (json string): Parsed output dict converted to JSON string
-    """
-    conn = get_connection(DATABASE_FILE)
-    try:
-        cursor = conn.execute(ADD_PARSED_OUTPUT,[site_id, node_id,parsed_result])
-        conn.commit()
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+#     Args:
+#         site_id (int)
+#         node_id (int)
+#         parsed_result (json string): Parsed output dict converted to JSON string
+#     """
+#     conn = get_connection(DATABASE_FILE)
+#     try:
+#         cursor = conn.execute(ADD_PARSED_OUTPUT,[site_id, node_id,parsed_result])
+#         conn.commit()
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
 
-def add_parsed_output_by_names(normalized_site_name,node_name,parsed_result):
-    """
-    Add parsed output to the database if the a duplicate result has not been added already
+# def add_parsed_output_by_names(normalized_site_name,node_name,parsed_result):
+#     """
+#     Add parsed output to the database if the a duplicate result has not been added already
 
-    Args:
-        normalized_site_name (str)
-        node_name ([str)
-        parsed_result (json string): Parsed output dict converted to JSON string
+#     Args:
+#         normalized_site_name (str)
+#         node_name ([str)
+#         parsed_result (json string): Parsed output dict converted to JSON string
 
-    Returns:
-        Bool: True if succesful
-    """
-    site_id = get_siteid_by_normalized_name(normalized_site_name)
-    node_id = get_nodeid_by_node_name(site_id, node_name)
-    if not node_id:
-        node_id = add_node(site_id,node_name)
-        logging.debug ('Assigned Node Id %s to %s of site %s',node_id,node_name,site_id)
-        add_parsed_output(site_id,node_id,parsed_result)
-    return True
+#     Returns:
+#         Bool: True if succesful
+#     """
+#     site_id = get_siteid_by_normalized_name(normalized_site_name)
+#     node_id = get_nodeid_by_node_name(site_id, node_name)
+#     if not node_id:
+#         node_id = add_node(site_id,node_name)
+#         logging.debug ('Assigned Node Id %s to %s of site %s',node_id,node_name,site_id)
+#         add_parsed_output(site_id,node_id,parsed_result)
+#     return True
 
-def get_parsed_output_by_siteid(site_id):
-    """
-    Get all parsed outputs of the site nodes
+# def get_parsed_output_by_siteid(site_id):
+#     """
+#     Get all parsed outputs of the site nodes
 
-    Args:
-        site_id (int)
+#     Args:
+#         site_id (int)
 
-    Returns:
-        site_outputs (dict): All parsed outputs of nodes (Format: {node_id:ouput})
-    """
-    try:
-        conn = get_connection(DATABASE_FILE)
-        site_outputs = {}
-        cursor = conn.execute(GET_PARSED_OUTPUT_BY_SITEID,[site_id])
-        for row in cursor:
-            node_id = row[1]
-            output = row[2]
-            site_outputs.update({node_id:output})
-        return site_outputs
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+#     Returns:
+#         site_outputs (dict): All parsed outputs of nodes (Format: {node_id:ouput})
+#     """
+#     try:
+#         conn = get_connection(DATABASE_FILE)
+#         site_outputs = {}
+#         cursor = conn.execute(GET_PARSED_OUTPUT_BY_SITEID,[site_id])
+#         for row in cursor:
+#             node_id = row[1]
+#             output = row[2]
+#             site_outputs.update({node_id:output})
+#         return site_outputs
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
 
 def delete_parsed_outputs():
     """
@@ -418,13 +420,16 @@ def delete_processed_states():
     """
     Clear processing_states table
     """
-    conn = get_connection(DATABASE_FILE)
+    cursor, conn = get_connection()
     try:
-        cursor = conn.execute(DELETE_PROCESSING_STATE)
-        conn.commit()
+        cursor.execute(DELETE_PROCESSING_STATE)
         logging.debug('Deleted processed states successfully')
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+    except mysql.connector.Error as error:
+        logging.error("Failed to delete processed states: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
 
 def initialize_processing_state():
     """
@@ -432,65 +437,71 @@ def initialize_processing_state():
     """
     delete_processed_states()
     site_ids = get_site_ids()
-    timestamp = datetime.datetime.now()
+    # ts = time.time()
+    # timestamp = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
     state_tuple = []
     for site_id in site_ids:
-        state_tuple.append((site_id,timestamp,'WAITING'))
-    conn = get_connection(DATABASE_FILE)
+        state_tuple.append((site_id,'WAITING'))
+    cursor, conn = get_connection(auto_commit=False)
     try:
-        cursor = conn.executemany(INITIALIZE_PROCESSING_STATE,state_tuple)
+        cursor.executemany(INITIALIZE_PROCESSING_STATE,state_tuple)
         conn.commit()
         logging.debug('Initialized processing states successfully')
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+    except mysql.connector.Error as error:
+        logging.error("Failed to initialize processing states: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
 
-def update_processing_state(site_id,state):
-    """
-    Update the current processing state of the site
+# def update_processing_state(site_id,state):
+#     """
+#     Update the current processing state of the site
 
-    Args:
-        site_id (int)
-        state (enum): ('WAITING','COMPLETE','ERRONEOUS','PARSED')
-    """
-    conn = get_connection(DATABASE_FILE)
-    timestamp = datetime.datetime.now()
-    try:
-        cursor = conn.execute(UPDATE_PROCESSING_STATE,[state,timestamp,site_id])
-        conn.commit()
-        logging.debug('Updated processing state of site %s to %s successfully',site_id,state)
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+#     Args:
+#         site_id (int)
+#         state (enum): ('WAITING','COMPLETE','ERRONEOUS','PARSED')
+#     """
+#     conn = get_connection(DATABASE_FILE)
+#     ts = time.time()
+#     timestamp = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+#     try:
+#         cursor = conn.execute(UPDATE_PROCESSING_STATE,[state,timestamp,site_id])
+#         conn.commit()
+#         logging.debug('Updated processing state of site %s to %s successfully',site_id,state)
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
 
-def update_processing_state_by_sitename(normalized_site_name,state):
-    """
-    Update the current processing state of the site by site name
+# def update_processing_state_by_sitename(normalized_site_name,state):
+#     """
+#     Update the current processing state of the site by site name
 
-    Args:
-        normalized_site_name (str)
-        state (enum): ('WAITING','COMPLETE','ERRONEOUS','PARSED')
-    """
-    site_id = get_siteid_by_normalized_name(normalized_site_name)
-    update_processing_state(site_id,state)
+#     Args:
+#         normalized_site_name (str)
+#         state (enum): ('WAITING','COMPLETE','ERRONEOUS','PARSED')
+#     """
+#     site_id = get_siteid_by_normalized_name(normalized_site_name)
+#     update_processing_state(site_id,state)
 
-def get_processing_state_siteids_by_state(state):
-    """
-    Get Site IDs with the given state
+# def get_processing_state_siteids_by_state(state):
+#     """
+#     Get Site IDs with the given state
 
-    Args:
-        state (enum): ('WAITING','COMPLETE','ERRONEOUS','PARSED')
+#     Args:
+#         state (enum): ('WAITING','COMPLETE','ERRONEOUS','PARSED')
 
-    Returns:
-        site_ids (list): IDs of sites in the given state
-    """
-    conn = get_connection(DATABASE_FILE)
-    try:
-        cursor = conn.execute(GET_PROCESSING_STATE_SITEIDS_BY_STATE,[state])
-        site_ids = []
-        for row in cursor:
-            site_ids.append(row[0])
-        return site_ids
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+#     Returns:
+#         site_ids (list): IDs of sites in the given state
+#     """
+#     conn = get_connection(DATABASE_FILE)
+#     try:
+#         cursor = conn.execute(GET_PROCESSING_STATE_SITEIDS_BY_STATE,[state])
+#         site_ids = []
+#         for row in cursor:
+#             site_ids.append(row[0])
+#         return site_ids
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
 
 # Job related functions
 
@@ -502,85 +513,58 @@ def add_job(job_id,site_id):
         job_id (str): Job ID
         site_id (int)
     """
-    timestamp = datetime.datetime.now()
-    job_tuple = (job_id, site_id, timestamp, 'STARTED')
-    conn = get_connection(DATABASE_FILE)
+    cursor, conn = get_connection()
     try:
-        conn.executemany(ADD_JOB, [job_tuple])
-        conn.commit()
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+        cursor.execute(ADD_JOB, (job_id, site_id, 'STARTED'))
+        logging.debug('Job %s added to database succesfully',job_id)
+    except mysql.connector.Error as error:
+        logging.error("Failed to add job: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
 
-# def add_job_batch(jobs,site_id):
-#     """
-#     Add jobs of same site batch wise to the database
 
-#     Args:
-#         jobs (list): List of Job IDs
-#         site_id (int)
-#     """
-#     timestamp = datetime.datetime.now()
-#     job_tuples = []
-#     for job_id in jobs:
-#         job_tuples.append((job_id, site_id, timestamp, 'STARTED','W'))
-#     conn = get_connection(DATABASE_FILE)
-#     try:
-#         conn.executemany(ADD_JOBS, job_tuples)
-#         conn.commit()
+# def get_all_jobs_by_site_id(site_id):
+#         cursor = conn.execute(GET_JOBS_BY_SITEID,[site_id])
+#         jobs = []
+#         for row in cursor:
+#             job_id = row[0]
+#             site_id = row[1]
+#             timestamp = row[2]
+#             abstract_state = row[3]
+#             state = row[4]
+#             job = {
+#                 'job_id': job_id,
+#                 'site_id': site_id,
+#                 'timestamp': timestamp,
+#                 'abstract_state': abstract_state,
+#                 'state': state
+#                 }
+#             jobs.append(job)  
+#         return jobs
 #     except sqlite3.Error as error:
 #         logging.exception("Error while executing the query: %s", error)
 
-def get_all_jobs_by_site_id(site_id):
-    """
-    Get all jobs of given site
+# def get_all_job_ids_by_state(state):
+#     """
+#     Get all jobs in the database with given abstract state
 
-    Args:
-        site_id (int)
+#     Args:
+#         state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
 
-    Returns:
-        jobs (dict): Details of all jobs in the given site
-    """
-    conn = get_connection(DATABASE_FILE)
-    try:
-        cursor = conn.execute(GET_JOBS_BY_SITEID,[site_id])
-        jobs = []
-        for row in cursor:
-            job_id = row[0]
-            site_id = row[1]
-            timestamp = row[2]
-            abstract_state = row[3]
-            state = row[4]
-            job = {
-                'job_id': job_id,
-                'site_id': site_id,
-                'timestamp': timestamp,
-                'abstract_state': abstract_state,
-                'state': state
-                }
-            jobs.append(job)  
-        return jobs
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
-
-def get_all_job_ids_by_state(state):
-    """
-    Get all jobs in the database with given abstract state
-
-    Args:
-        state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
-
-    Returns:
-        job_ids(list): Job IDs of jobs  in given abstract state
-    """
-    conn = get_connection(DATABASE_FILE)
-    try:
-        cursor = conn.execute(GET_ALL_JOB_IDS_BY_STATE,[state])
-        job_ids = []
-        for row in cursor:
-            job_ids.append(row[0])
-        return job_ids
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+#     Returns:
+#         job_ids(list): Job IDs of jobs  in given abstract state
+#     """
+#     conn = get_connection(DATABASE_FILE)
+#     try:
+#         cursor = conn.execute(GET_ALL_JOB_IDS_BY_STATE,[state])
+#         job_ids = []
+#         for row in cursor:
+#             job_ids.append(row[0])
+#         return job_ids
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
 
 # def get_jobs_by_siteid_and_abs_state(site_id,abstract_state):
 #     """
@@ -615,24 +599,25 @@ def get_all_job_ids_by_state(state):
 #     except sqlite3.Error as error:
 #         logging.exception("Error while executing the query: %s", error)
 
-def update_job_state_by_job_id(job_id,state):
-    """
-    Update state of the job
+# USED IN JAVA
+# def update_job_state_by_job_id(job_id,state):
+#     """
+#     Update state of the job
 
-    Args:
-        job_id (int): Single id or id list
-        state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
-    """
-    timestamp = datetime.datetime.now()
-    conn = get_connection(DATABASE_FILE)
-    job_tuple = []
-    if type(job_id) == int:
-        job_tuple.append(timestamp,state,job_id)
-    elif type(job_id) == list: 
-        for id in job_id:
-            job_tuple.append((timestamp,state,id))
-    try:
-        conn.executemany(UPDATE_JOB_STATE_BY_JOBID, job_tuple)
-        conn.commit()
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+#     Args:
+#         job_id (int): Single id or id list
+#         state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
+#     """
+#     timestamp = datetime.datetime.now()
+#     conn = get_connection(DATABASE_FILE)
+#     job_tuple = []
+#     if type(job_id) == int:
+#         job_tuple.append(timestamp,state,job_id)
+#     elif type(job_id) == list: 
+#         for id in job_id:
+#             job_tuple.append((timestamp,state,id))
+#     try:
+#         conn.executemany(UPDATE_JOB_STATE_BY_JOBID, job_tuple)
+#         conn.commit()
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
