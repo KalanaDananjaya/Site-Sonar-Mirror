@@ -4,7 +4,7 @@ import argparse,shlex,os,shutil,logging,json
 from subprocess import Popen,PIPE, CalledProcessError
 from multiprocessing import Process
 
-from db_connection import add_sites_from_csv,initialize_db, clear_db, clear_tables, \
+from db_connection import add_sites_from_csv,initialize_db, clear_tables, \
     get_parsed_output_by_siteid, get_all_job_ids_by_state, update_job_state_by_job_id
 from output_parser import parse_output_directory,clear_output_dir
 from config import *
@@ -15,7 +15,7 @@ from processes import job_submission, clear_grid_output_dir, search_results
 def init(args):
     clear_grid_output_dir()
     clear_output_dir(OUTPUT_FOLDER) 
-    clear_db()
+    clear_tables(all=True)
     initialize_db()
     add_sites_from_csv(SITES_CSV_FILE)
     logging.info('Database initialized using %s file',SITES_CSV_FILE)
@@ -26,7 +26,6 @@ def reset(args):
     # A workaround should be used to retain the parsed outputs while a run is going
     clear_tables()
     logging.info('Fresh environment started for a new run')
-
 
 def stage_jobs(args):
     command = 'bash staging-grid.sh {}'.format(GRID_USER_HOME)

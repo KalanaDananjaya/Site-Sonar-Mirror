@@ -1,73 +1,79 @@
 import sqlite3
 import csv 
 import datetime
+import time
 import logging
 import os
 
 from config import SQL_FILE,DATABASE_FILE
 from sql_queries import *
 
+import mysql.connector
 
 # Utils
 def normalize_ce_name(target_ce):
     return target_ce.replace("::", "_").lower()[len("alice_"):]
 
 # Connection Functions
-def get_connection(database_file, detect_types= sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES):
-    """
-    Create database connection
 
-    Args:
-        database_file (str): Name of the SQLite DB file
-        detect_types : Used to store datetime objects. Defaults to sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES.
-
-    Returns:
-        SQLite Connection object: Database connection
-    """
+def get_connection(auto_commit=True):
     try:
-        conn = sqlite3.connect(database_file)
-        return conn
-    except sqlite3.Error as error:
-        logging.exception("Error while connecting to database: %s", error)
+        connection = mysql.connector.connect(
+        host="remotemysql.com",
+        user="D8h8sG8cqZ",
+        password="avMnBqDCal",
+        database="D8h8sG8cqZ",
+        autocommit=auto_commit
+        )
+        cursor = connection.cursor()
+        return cursor,connection
+    except mysql.connector.Error as error:
+        print("Error while connecting to MySQL", error)
 
 def initialize_db():
     """
     Initialize database using SQL File
 
     Args:
-        DATABASE_FILE (str): Name of the SQLite DB file, set from config
         SQL_FILE(str): Set from config
     """
-    conn = get_connection(DATABASE_FILE)
+    cursor,conn = get_connection(auto_commit=False)
     with open (SQL_FILE,'r') as f:
+        sql_lines = f.read().split(';')
         sql = f.read()
         try:
-            conn.executescript(sql)
+            cursor.execute(sql)
             conn.commit()
-        except sqlite3.Error as error:
-            logging.exception("Error while connecting to database: %s", error)
+            logging.info('Database initialized succesfully')
+        except mysql.connector.Error as error:
+            logging.debug("Failed to create tables in MySQL: {}".format(error))
+            conn.rollback()
+        finally:
+            if(conn.is_connected()):
+                cursor.close()
+                conn.close()
 
-def clear_db():
-    """
-    Delete the database file if exists
-    """
-    if os.path.exists(DATABASE_FILE): 
-        os.remove(DATABASE_FILE) 
-
-def clear_tables():
+def clear_tables(all=False):
     """
     Clear Nodes, Jobs, Processing_state, Parsed_outputs tables
     """
-    conn = get_connection(DATABASE_FILE)
+    cursor,conn = get_connection(auto_commit=False)
     try:
-        conn.execute(DELETE_NODES)
-        conn.execute(DELETE_JOBS)
-        conn.execute(DELETE_PROCESSING_STATE)
-        conn.execute(DELETE_PARSED_OUTPUTS)
+        if all:
+            cursor.execute(DELETE_SITES)
+        cursor.execute(DELETE_NODES)
+        cursor.execute(DELETE_JOBS)
+        cursor.execute(DELETE_PROCESSING_STATE)
+        cursor.execute(DELETE_PARSED_OUTPUTS)
         conn.commit()
         logging.debug('Database tables cleared')
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+    except mysql.connector.Error as error:
+            logging.error("Failed to clear database: {}".format(error))
+            conn.rollback()
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
 
 
 # Site Related Functions
@@ -78,24 +84,32 @@ def get_sites():
     Returns:
         sites(dict): All site data
     """
-    conn = get_connection(DATABASE_FILE)
-    cursor = conn.execute(GET_SITES)
-    sites = []
-    for row in cursor:
-        site_id = row[0]
-        site_name = row[1]
-        normalized_name = row[2]
-        num_nodes = row[3]
-        last_update = row[4]
-        site = {
-            'site_id': site_id,
-            'site_name': site_name,
-            'normalized_name': normalized_name,
-            'num_nodes': num_nodes,
-            'last_update': last_update
-            }
-        sites.append(site)
-    return sites
+    cursor, conn = get_connection()
+    try:
+        cursor.execute(GET_SITES)
+        results = cursor.fetchall()
+        sites = []
+        for row in results:
+            site_id = row[0]
+            site_name = row[1]
+            normalized_name = row[2]
+            num_nodes = row[3]
+            last_update = row[4]
+            site = {
+                'site_id': site_id,
+                'site_name': site_name,
+                'normalized_name': normalized_name,
+                'num_nodes': num_nodes,
+                'last_update': last_update
+                }
+            sites.append(site)
+        return sites
+    except mysql.connector.Error as error:
+            logging.error("Failed to retrieve sites: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
 
 def get_site_ids():
     """
@@ -104,13 +118,21 @@ def get_site_ids():
     Returns:
         Site IDs(list)
     """
-    conn = get_connection(DATABASE_FILE)
-    cursor = conn.execute(GET_SITE_IDS)
-    ids = []
-    for row in cursor:
-        site_id = row[0]
-        ids.append(site_id)
-    return ids
+    cursor, conn = get_connection()
+    try:
+        cursor.execute(GET_SITE_IDS)
+        results = cursor.fetchall()
+        ids = []
+        for row in results:
+            site_id = row[0]
+            ids.append(site_id)
+        return ids
+    except mysql.connector.Error as error:
+            logging.debug("Failed to get site ids: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
 
 def add_sites_from_csv(csv_filename):
     """
@@ -119,8 +141,12 @@ def add_sites_from_csv(csv_filename):
     Args:
         csv_filename (str): Name of the CSV file (Format: sitename,num_nodes)
     """
-    conn = get_connection(DATABASE_FILE)
-    current_time = datetime.datetime.now()
+
+    cursor,conn = get_connection()
+
+    ts = time.time()
+    current_time = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+
     site_tuples = []
     sitenames = get_sitenames()
     with open(csv_filename, newline='') as csvfile:
@@ -140,9 +166,18 @@ def add_sites_from_csv(csv_filename):
                 normalized_name = normalize_ce_name(current_site_name)
                 site_tuples.append((current_site_name, normalized_name, num_nodes, current_time))
                 logging.debug('Adding %s to the database', current_site_name)
-    conn.executemany(ADD_SITE, site_tuples)
-    conn.commit()
-    logging.debug("Total number of sites added : %s", conn.total_changes)
+    try:
+        cursor.executemany(ADD_SITE, site_tuples)
+        conn.commit()
+        logging.debug("Total number of sites added : %s", cursor.rowcount)
+    except mysql.connector.Error as error:
+        logging.error("Failed to add sites to database: {}".format(error))
+        conn.rollback()
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
+            logging.debug("connection is closed")
 
 def update_site_last_update_time(site_id):
     """
@@ -152,11 +187,15 @@ def update_site_last_update_time(site_id):
         site_id (int): Site ID
     """
     current_time = datetime.datetime.now()
-    conn = get_connection(DATABASE_FILE)
+    cursor, conn = get_connection()
     try:
-        cursor = conn.execute(UPDATE_LAST_SITE_UPDATE_TIME,[current_time,site_id])
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+        cursor.execute(UPDATE_LAST_SITE_UPDATE_TIME,[current_time,site_id])
+    except mysql.connector.Error as error:
+        logging.error("Failed to update site last update times: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
                 
 
 def check_sitename_exists(sitenames,current_site_name):
@@ -185,13 +224,14 @@ def get_sitenames():
     Returns:
         sitenames
     """
-    conn = get_connection(DATABASE_FILE)
+    cursor, conn = get_connection()
     sitenames=[]
-    cursor = conn.execute(GET_SITENAMES)
-    for row in cursor:
+    cursor.execute(GET_SITENAMES)
+    results = cursor.fetchall()
+    for row in results:
         sitenames.append(row[0])
     return sitenames
-
+########## UPDATED UPTO HERE
 def get_num_nodes_in_site(site_id):
     """
     Get the number of nodes in site
