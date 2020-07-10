@@ -18,8 +18,8 @@ DELETE_NODES = 'TRUNCATE TABLE nodes'
  
 ADD_JOB = 'INSERT INTO jobs (job_id,site_id,last_update,job_state) VALUES (%s, %s, NOW(), %s)'
 # GET_JOBS_BY_SITEID = 'SELECT * FROM jobs WHERE site_id = (?)'
-# GET_ALL_JOB_IDS_BY_STATE = 'SELECT job_id FROM jobs WHERE job_state = (?)'
-# UPDATE_JOB_STATE_BY_JOBID = 'UPDATE jobs SET timestamp=(?), job_state=(?) WHERE job_id=(?)'
+GET_ALL_JOB_IDS_BY_STATE = 'SELECT job_id FROM jobs WHERE job_state = %s'
+UPDATE_JOB_STATE_BY_JOBID = 'UPDATE jobs SET last_update=NOW(), job_state=%s WHERE job_id=%s'
 DELETE_JOBS = 'TRUNCATE TABLE jobs'
 
 INITIALIZE_PROCESSING_STATE = 'INSERT INTO processing_state (site_id,last_update, state) VALUES (%s, NOW(), %s)'

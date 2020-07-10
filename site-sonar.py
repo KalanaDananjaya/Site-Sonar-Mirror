@@ -4,7 +4,7 @@ import argparse,shlex,os,shutil,logging,json
 from subprocess import Popen,PIPE, CalledProcessError
 from multiprocessing import Process
 
-from db_connection import add_sites_from_csv,initialize_db, clear_tables
+from db_connection import add_sites_from_csv,initialize_db, clear_tables, get_all_job_ids_by_state, update_job_state_by_job_id
 from output_parser import clear_output_dir
 from config import *
 from processes import job_submission, clear_grid_output_dir, search_results
@@ -115,7 +115,7 @@ def abort(args):
         with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
             for line in p.stdout:
                 logging.debug('> %s ',line) 
-            logging.info ('Jobs killed succesfully')
+            logging.info ('Job killed succesfully')
         if p.returncode != 0:
             raise CalledProcessError(p.returncode, p.args)
         update_job_state_by_job_id(job_ids,'KILLED')

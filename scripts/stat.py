@@ -7,16 +7,13 @@ import zipfile
 url = os.environ.get('APMON_CONFIG')
 jobId = os.environ.get('ALIEN_PROC_ID')
 hostname = os.environ.get('ALIEN_HOSTNAME')
-os.getcwd()
-# with Popen('unzip apmon.zip', stdout=PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
-#     out = p.stdout
 
 with zipfile.ZipFile('apmon.zip', 'r') as zip_ref:
     zip_ref.extractall('./')
 
-with Popen('ls', stdout=PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
-    for line in p.stdout:
-        print (line)
+# with Popen('ls', stdout=PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
+#     for line in p.stdout:
+#         print (line)
 
 import apmon
 

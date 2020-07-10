@@ -4,7 +4,7 @@ import time
 import logging
 import os
 
-from config import SQL_FILE
+from config import SQL_FILE,DB_HOST,DB_USER,DB_PWD,DB_DATABASE
 from sql_queries import *
 
 import mysql.connector
@@ -18,16 +18,16 @@ def normalize_ce_name(target_ce):
 def get_connection(auto_commit=True):
     try:
         connection = mysql.connector.connect(
-        host="remotemysql.com",
-        user="D8h8sG8cqZ",
-        password="avMnBqDCal",
-        database="D8h8sG8cqZ",
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PWD,
+        database=DB_DATABASE,
         autocommit=auto_commit
         )
         cursor = connection.cursor()
         return cursor,connection
     except mysql.connector.Error as error:
-        print("Error while connecting to MySQL", error)
+        logging.error("Error while connecting to MySQL", error)
 
 def initialize_db():
     """
@@ -45,7 +45,7 @@ def initialize_db():
             conn.commit()
             logging.info('Database initialized succesfully')
         except mysql.connector.Error as error:
-            logging.debug("Failed to create tables in MySQL: {}".format(error))
+            logging.error("Failed to create tables in MySQL: {}".format(error))
             conn.rollback()
         finally:
             if(conn.is_connected()):
@@ -159,7 +159,6 @@ def add_sites_from_csv(csv_filename):
                 else:
                     num_nodes = int(num_nodes)
                 normalized_name = normalize_ce_name(current_site_name)
-                # site_tuples.append((current_site_name, normalized_name, num_nodes, current_time))
                 site_tuples.append((current_site_name, normalized_name, num_nodes))
                 logging.debug('Adding %s to the database', current_site_name)
     try:
@@ -546,25 +545,30 @@ def add_job(job_id,site_id):
 #     except sqlite3.Error as error:
 #         logging.exception("Error while executing the query: %s", error)
 
-# def get_all_job_ids_by_state(state):
-#     """
-#     Get all jobs in the database with given abstract state
+def get_all_job_ids_by_state(state):
+    """
+    Get all jobs in the database with given abstract state
 
-#     Args:
-#         state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
+    Args:
+        state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
 
-#     Returns:
-#         job_ids(list): Job IDs of jobs  in given abstract state
-#     """
-#     conn = get_connection(DATABASE_FILE)
-#     try:
-#         cursor = conn.execute(GET_ALL_JOB_IDS_BY_STATE,[state])
-#         job_ids = []
-#         for row in cursor:
-#             job_ids.append(row[0])
-#         return job_ids
-#     except sqlite3.Error as error:
-#         logging.exception("Error while executing the query: %s", error)
+    Returns:
+        job_ids(list): Job IDs of jobs in given  state
+    """
+    cursor, conn = get_connection()
+    try:
+        cursor.execute(GET_ALL_JOB_IDS_BY_STATE,[state])
+        results = cursor.fetchall()
+        job_ids = []
+        for row in results:
+            job_ids.append(row[0])
+        return job_ids
+    except mysql.connector.Error as error:
+        logging.error("Failed to get jobs by state: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
 
 # def get_jobs_by_siteid_and_abs_state(site_id,abstract_state):
 #     """
@@ -599,25 +603,28 @@ def add_job(job_id,site_id):
 #     except sqlite3.Error as error:
 #         logging.exception("Error while executing the query: %s", error)
 
-# USED IN JAVA
-# def update_job_state_by_job_id(job_id,state):
-#     """
-#     Update state of the job
+def update_job_state_by_job_id(job_id,state):
+    """
+    Update state of the job
 
-#     Args:
-#         job_id (int): Single id or id list
-#         state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
-#     """
-#     timestamp = datetime.datetime.now()
-#     conn = get_connection(DATABASE_FILE)
-#     job_tuple = []
-#     if type(job_id) == int:
-#         job_tuple.append(timestamp,state,job_id)
-#     elif type(job_id) == list: 
-#         for id in job_id:
-#             job_tuple.append((timestamp,state,id))
-#     try:
-#         conn.executemany(UPDATE_JOB_STATE_BY_JOBID, job_tuple)
-#         conn.commit()
-#     except sqlite3.Error as error:
-#         logging.exception("Error while executing the query: %s", error)
+    Args:
+        job_id (int): Single id or id list
+        state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
+    """
+    cursor, conn = get_connection(auto_commit=False)
+    job_tuple = []
+    if type(job_id) == int:
+        job_tuple.append(state,job_id)
+    elif type(job_id) == list: 
+        for id in job_id:
+            job_tuple.append((state,id))
+    try:
+        cursor.executemany(UPDATE_JOB_STATE_BY_JOBID, job_tuple)
+        conn.commit()
+    except mysql.connector.Error as error:
+        logging.error("Failed to update job state: {}".format(error))
+        conn.rollback()
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()

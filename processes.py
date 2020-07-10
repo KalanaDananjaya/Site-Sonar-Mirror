@@ -54,7 +54,6 @@ def job_submission(jdl_name):
 
     for site in site_details:
         num_jobs = JOB_FACTOR * site['num_nodes']+1
-        #jobs = []
         sitename = site['site_name']
         logging.info('Submitting %s jobs to the Grid site %s',str(num_jobs - 1), sitename)
         for i in range(1, num_jobs):
@@ -73,7 +72,6 @@ def job_submission(jdl_name):
                     if ("Your new job ID is" in line):
                         job_id = line.split(' ')[-1]
                         job_id = escape_string(job_id)
-                        #jobs.append(int(job_id))
             if p.returncode != 0:
                 raise CalledProcessError(p.returncode, p.args)
             add_job(job_id, site['site_id'])

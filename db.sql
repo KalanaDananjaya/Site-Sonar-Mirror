@@ -20,13 +20,15 @@ node_name text NOT NULL);
 
 DROP TABLE IF EXISTS jobs;
 CREATE TABLE jobs
-(job_id int NOT NULL PRIMARY KEY,
+(data_id INTEGER AUTO_INCREMENT,
+job_id int NOT NULL,
 site_id int NOT NULL,
 last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 job_state ENUM ('STARTED','ERROR', 'STALLED','COMPLETED','KILLED')  NOT NULL,
 node_id int,
 paramName text,
-paramValue text);
+paramValue text,
+PRIMARY KEY(data_id,job_id));
 
 DROP TABLE IF EXISTS parsed_outputs;
 CREATE TABLE parsed_outputs
