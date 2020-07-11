@@ -60,6 +60,7 @@ def clear_tables(all=False):
     try:
         if all:
             cursor.execute(DELETE_SITES)
+            cursor.execute(DELETE_RUN)
         cursor.execute(DELETE_NODES)
         cursor.execute(DELETE_JOBS)
         cursor.execute(DELETE_PROCESSING_STATE)
@@ -74,6 +75,30 @@ def clear_tables(all=False):
             cursor.close()
             conn.close()
 
+def start_new_run():
+    cursor,conn = get_connection()
+    try:
+        cursor.execute(INCREMENT_RUN_ID)
+        logging.debug('Run Id incremented')
+    except mysql.connector.Error as error:
+            logging.error("Failed to increment run id: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
+
+def get_run_id():
+    cursor, conn = get_connection()
+    try:
+        cursor.execute(GET_LAST_RUN_ID)
+        run_id = cursor.fetchone()
+        return run_id[0]
+    except mysql.connector.Error as error:
+            logging.error("Failed to get last run id: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
 
 # Site Related Functions
 def get_sites():
@@ -415,32 +440,31 @@ def get_sitenames():
 #         logging.exception("Error while executing the query: %s", error)
 
 # Processing state related functions
-def delete_processed_states():
-    """
-    Clear processing_states table
-    """
-    cursor, conn = get_connection()
-    try:
-        cursor.execute(DELETE_PROCESSING_STATE)
-        logging.debug('Deleted processed states successfully')
-    except mysql.connector.Error as error:
-        logging.error("Failed to delete processed states: {}".format(error))
-    finally:
-        if(conn.is_connected()):
-            cursor.close()
-            conn.close()
+# def delete_processed_states():
+#     """
+#     Clear processing_states table
+#     """
+#     cursor, conn = get_connection()
+#     try:
+#         cursor.execute(DELETE_PROCESSING_STATE)
+#         logging.debug('Deleted processed states successfully')
+#     except mysql.connector.Error as error:
+#         logging.error("Failed to delete processed states: {}".format(error))
+#     finally:
+#         if(conn.is_connected()):
+#             cursor.close()
+#             conn.close()
 
 def initialize_processing_state():
     """
     Initialize processing_states table
     """
-    delete_processed_states()
+    # delete_processed_states()
     site_ids = get_site_ids()
-    # ts = time.time()
-    # timestamp = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+    run_id = get_run_id()
     state_tuple = []
     for site_id in site_ids:
-        state_tuple.append((site_id,'WAITING'))
+        state_tuple.append((site_id,run_id,'WAITING'))
     cursor, conn = get_connection(auto_commit=False)
     try:
         cursor.executemany(INITIALIZE_PROCESSING_STATE,state_tuple)
@@ -514,7 +538,8 @@ def add_job(job_id,site_id):
     """
     cursor, conn = get_connection()
     try:
-        cursor.execute(ADD_JOB, (job_id, site_id, 'STARTED'))
+        run_id = get_run_id()
+        cursor.execute(ADD_JOB, (job_id,run_id, site_id, 'STARTED'))
         logging.debug('Job %s added to database succesfully',job_id)
     except mysql.connector.Error as error:
         logging.error("Failed to add job: {}".format(error))
@@ -557,7 +582,8 @@ def get_all_job_ids_by_state(state):
     """
     cursor, conn = get_connection()
     try:
-        cursor.execute(GET_ALL_JOB_IDS_BY_STATE,[state])
+        run_id = get_run_id()
+        cursor.execute(GET_ALL_JOB_IDS_BY_STATE,[state,run_id])
         results = cursor.fetchall()
         job_ids = []
         for row in results:
@@ -612,12 +638,13 @@ def update_job_state_by_job_id(job_id,state):
         state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
     """
     cursor, conn = get_connection(auto_commit=False)
+    run_id = get_run_id()
     job_tuple = []
-    if type(job_id) == int:
-        job_tuple.append(state,job_id)
+    if type(job_id) == str:
+        job_tuple.append((state,job_id,run_id))
     elif type(job_id) == list: 
         for id in job_id:
-            job_tuple.append((state,id))
+            job_tuple.append((state,id,run_id))
     try:
         cursor.executemany(UPDATE_JOB_STATE_BY_JOBID, job_tuple)
         conn.commit()

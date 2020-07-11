@@ -4,7 +4,7 @@ import argparse,shlex,os,shutil,logging,json
 from subprocess import Popen,PIPE, CalledProcessError
 from multiprocessing import Process
 
-from db_connection import add_sites_from_csv,initialize_db, clear_tables, get_all_job_ids_by_state, update_job_state_by_job_id
+from db_connection import add_sites_from_csv,initialize_db, clear_tables, get_all_job_ids_by_state, update_job_state_by_job_id, start_new_run
 from output_parser import clear_output_dir
 from config import *
 from processes import job_submission, clear_grid_output_dir, search_results
@@ -17,13 +17,14 @@ def init(args):
     clear_tables(all=True)
     initialize_db()
     add_sites_from_csv(SITES_CSV_FILE)
+    start_new_run()
     logging.info('Database initialized using %s file',SITES_CSV_FILE)
 
 def reset(args):
     clear_grid_output_dir()
     clear_output_dir(OUTPUT_FOLDER)
     # A workaround should be used to retain the parsed outputs while a run is going
-    clear_tables()
+    start_new_run()
     logging.info('Fresh environment started for a new run')
 
 def stage_jobs(args):
@@ -80,7 +81,6 @@ def search(args):
 def abort(args):
     # Kill all jobs
     if args.all:
-        ### Remove get_all_job_ids_by_abs_state
         started_job_ids = get_all_job_ids_by_state('STARTED')
         stalled_job_ids = get_all_job_ids_by_state('STALLED')
         job_ids = started_job_ids + stalled_job_ids
@@ -97,11 +97,10 @@ def abort(args):
             with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
                 for line in p.stdout:
                     logging.debug('> %s ',line) 
-                #logging.debug ('%d jobs killed',len(job_ids_slice))
             if p.returncode != 0:
                 raise CalledProcessError(p.returncode, p.args)
             if end == num_jobs:
-                logging.info ('Total %d jobs killed succesfully',num_jobs)
+                logging.info ('Total of %d jobs killed succesfully',num_jobs)
                 break
             else:
                 start += 500
@@ -115,7 +114,7 @@ def abort(args):
         with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
             for line in p.stdout:
                 logging.debug('> %s ',line) 
-            logging.info ('Job killed succesfully')
+            logging.info ('Job(s) killed succesfully')
         if p.returncode != 0:
             raise CalledProcessError(p.returncode, p.args)
         update_job_state_by_job_id(job_ids,'KILLED')
