@@ -30,4 +30,4 @@ DELETE_PROCESSING_STATE = 'TRUNCATE TABLE processing_state'
 
 # ADD_PARSED_OUTPUT = 'INSERT INTO parsed_outputs (site_id,node_id,parsed_result) VALUES (?, ?, ?)'
 # GET_PARSED_OUTPUT_BY_SITEID = 'SELECT * FROM parsed_outputs WHERE site_id = (?)'
-DELETE_PARSED_OUTPUTS = 'TRUNCATE TABLE parsed_outputs'
+DELETE_PARAMETERS = 'TRUNCATE TABLE parameters'

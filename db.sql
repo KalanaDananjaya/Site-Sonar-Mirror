@@ -1,8 +1,8 @@
 DROP TABLE IF EXISTS sites;
 CREATE TABLE sites
 (site_id INTEGER PRIMARY KEY AUTO_INCREMENT,
-site_name text NOT NULL,
-normalized_name text NOT NULL,
+site_name varchar(50) NOT NULL,
+normalized_name varchar(50) NOT NULL,
 num_nodes int NOT NULL,
 last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);
 
@@ -16,23 +16,21 @@ DROP TABLE IF EXISTS nodes;
 CREATE TABLE nodes
 (node_id INTEGER PRIMARY KEY AUTO_INCREMENT,
 site_id int NOT NULL,
-node_name text NOT NULL);
+node_name varchar(50) NOT NULL);
 
 DROP TABLE IF EXISTS jobs;
 CREATE TABLE jobs
-(data_id INTEGER AUTO_INCREMENT,
-job_id int NOT NULL,
+(job_id int NOT NULL PRIMARY KEY,
 site_id int NOT NULL,
 last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-job_state ENUM ('STARTED','ERROR', 'STALLED','COMPLETED','KILLED')  NOT NULL,
-node_id int,
-paramName text,
-paramValue text,
-PRIMARY KEY(data_id,job_id));
+job_state ENUM ('STARTED','ERROR', 'STALLED','COMPLETED','KILLED')  NOT NULL
+);
 
-DROP TABLE IF EXISTS parsed_outputs;
-CREATE TABLE parsed_outputs
-(site_id int NOT NULL,
+DROP TABLE IF EXISTS parameters;
+CREATE TABLE parameters
+(job_id int NOT NULL,
 node_id int NOT NULL,
-parsed_result text,
-PRIMARY KEY (site_id,node_id));
+paramName varchar(500) NOT NULL,
+paramValue varchar(500) NOT NULL,
+last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+PRIMARY KEY (job_id,paramName));

@@ -97,7 +97,7 @@ def abort(args):
             with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
                 for line in p.stdout:
                     logging.debug('> %s ',line) 
-                logging.debug ('%d number of jobs killed',len(job_ids_slice))
+                #logging.debug ('%d jobs killed',len(job_ids_slice))
             if p.returncode != 0:
                 raise CalledProcessError(p.returncode, p.args)
             if end == num_jobs:

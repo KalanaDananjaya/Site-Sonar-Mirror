@@ -63,7 +63,7 @@ def clear_tables(all=False):
         cursor.execute(DELETE_NODES)
         cursor.execute(DELETE_JOBS)
         cursor.execute(DELETE_PROCESSING_STATE)
-        cursor.execute(DELETE_PARSED_OUTPUTS)
+        cursor.execute(DELETE_PARAMETERS)
         conn.commit()
         logging.debug('Database tables cleared')
     except mysql.connector.Error as error:
@@ -402,17 +402,17 @@ def get_sitenames():
 #     except sqlite3.Error as error:
 #         logging.exception("Error while executing the query: %s", error)
 
-def delete_parsed_outputs():
-    """
-    Clear Parsed_outputs table 
-    """
-    conn = get_connection(DATABASE_FILE)
-    try:
-        cursor = conn.execute(DELETE_PARSED_OUTPUTS)
-        conn.commit()
-        logging.debug('Deleted parsed outputs successfully')
-    except sqlite3.Error as error:
-        logging.exception("Error while executing the query: %s", error)
+# def delete_parsed_outputs():
+#     """
+#     Clear Parsed_outputs table 
+#     """
+#     conn = get_connection(DATABASE_FILE)
+#     try:
+#         cursor = conn.execute(DELETE_PARAMETERS)
+#         conn.commit()
+#         logging.debug('Deleted parsed outputs successfully')
+#     except sqlite3.Error as error:
+#         logging.exception("Error while executing the query: %s", error)
 
 # Processing state related functions
 def delete_processed_states():
