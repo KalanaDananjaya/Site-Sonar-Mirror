@@ -77,11 +77,45 @@ def clear_tables(all=False):
 
 def start_new_run():
     cursor,conn = get_connection()
+    run_id = get_run_id()
+    run_exists = check_run_exists(run_id)
+    if not run_exists:
+        try:
+            cursor.execute(INCREMENT_RUN_ID)
+            logging.debug('Run Id incremented')
+        except mysql.connector.Error as error:
+                logging.error("Failed to increment run id: {}".format(error))
+        finally:
+            if(conn.is_connected()):
+                cursor.close()
+                conn.close()
+    else:
+        logging.error("Cannot start a new run as the last run is still running")
+
+def check_run_exists(run_id):
+    cursor,conn = get_connection()
+    flag = True
     try:
-        cursor.execute(INCREMENT_RUN_ID)
-        logging.debug('Run Id incremented')
+        cursor.execute(CHECK_RUN_STATE,[run_id])
+        logging.debug('Last run is still running')
+        flag = True
     except mysql.connector.Error as error:
-            logging.error("Failed to increment run id: {}".format(error))
+        logging.error("Failed to increment run id: {}".format(error))
+        flag = False
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
+        return flag
+
+def change_run_state(state):
+    run_id = get_run_id()
+    cursor,conn = get_connection()
+    try:
+        cursor.execute(ABORT_RUN,[state,run_id])
+        logging.debug('Run aborted')
+    except mysql.connector.Error as error:
+            logging.error("Failed to abort the run: {}".format(error))
     finally:
         if(conn.is_connected()):
             cursor.close()
@@ -458,8 +492,10 @@ def get_sitenames():
 def initialize_processing_state():
     """
     Initialize processing_states table
+
+    Return True if succesfull
     """
-    # delete_processed_states()
+    success_flag = False
     site_ids = get_site_ids()
     run_id = get_run_id()
     state_tuple = []
@@ -470,12 +506,16 @@ def initialize_processing_state():
         cursor.executemany(INITIALIZE_PROCESSING_STATE,state_tuple)
         conn.commit()
         logging.debug('Initialized processing states successfully')
+        success_flag = True
     except mysql.connector.Error as error:
         logging.error("Failed to initialize processing states: {}".format(error))
+        success_flag = False
     finally:
         if(conn.is_connected()):
             cursor.close()
             conn.close()
+        return success_flag
+        
 
 # def update_processing_state(site_id,state):
 #     """

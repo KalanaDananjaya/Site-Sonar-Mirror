@@ -47,17 +47,18 @@ else:
 
 # you can put as many pairs of parameter_name, parameter_value as you want
 # but be careful not to create packets longer than 8K.
-for i in range (10):
-    for key in monitors.keys():
-        command = monitors[key]
-        value = ''
-        with Popen(command, stdout=PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
-            print (command)
-            for line in p.stdout:
-                value += line
-            print (value)
-        apm.sendParameters("SiteSonar", jobId + "_" + hostname + "_" + str(i) , {str(key): str(value)})
-        time.sleep(.005)
-    time.sleep(10)
 
+for key in monitors.keys():
+    command = monitors[key]
+    value = ''
+    with Popen(command, stdout=PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
+        print (command)
+        for line in p.stdout:
+            value += line
+        print (value)
+    apm.sendParameters("SiteSonar", jobId + "_" + hostname , {str(key): str(value)})
+    time.sleep(.005)
+
+time.sleep(10)
+apm.sendParameters("SiteSonar", jobId + "_" + hostname , {"state": "complete"})
 print("Job Completed")

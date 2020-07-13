@@ -4,7 +4,7 @@ import argparse,shlex,os,shutil,logging,json
 from subprocess import Popen,PIPE, CalledProcessError
 from multiprocessing import Process
 
-from db_connection import add_sites_from_csv,initialize_db, clear_tables, get_all_job_ids_by_state, update_job_state_by_job_id, start_new_run
+from db_connection import add_sites_from_csv,initialize_db, clear_tables, get_all_job_ids_by_state, update_job_state_by_job_id, start_new_run,change_run_state
 from output_parser import clear_output_dir
 from config import *
 from processes import job_submission, clear_grid_output_dir, search_results
@@ -15,7 +15,6 @@ def init(args):
     clear_grid_output_dir()
     clear_output_dir(OUTPUT_FOLDER) 
     clear_tables(all=True)
-    initialize_db()
     add_sites_from_csv(SITES_CSV_FILE)
     start_new_run()
     logging.info('Database initialized using %s file',SITES_CSV_FILE)
@@ -106,6 +105,7 @@ def abort(args):
                 start += 500
                 end += 500
         update_job_state_by_job_id(job_ids,'KILLED')
+        change_run_state('ABORTED')
             
     # Kill jobs with given ids
     elif args.job_id:
