@@ -23,6 +23,8 @@ UPDATE_JOB_STATE_BY_JOBID = 'UPDATE jobs SET last_update=NOW(), job_state=%s WHE
 DELETE_JOBS = 'TRUNCATE TABLE jobs'
 
 INITIALIZE_PROCESSING_STATE = 'INSERT INTO processing_state (site_id,run_id,last_update, state) VALUES (%s, %s, NOW(), %s)'
+UPDATE_PROCESSING_STATE = 'UPDATE processing_state SET last_update=NOW(),state =%s WHERE site_id=%s AND run_id=%s'
+GET_SITE_IDS_BY_PROCESSING_STATE = 'SELECT site_id FROM processing_state WHERE (state=%s) AND (run_id=%s)'
 # GET_PROCESSING_STATE = 'SELECT * FROM processing_state WHERE site_id = (?)'
 # GET_PROCESSING_STATE_SITEIDS_BY_STATE = 'SELECT site_id FROM processing_state WHERE state = (?)'
 # UPDATE_PROCESSING_STATE = 'UPDATE processing_state SET state = (?),timestamp = (?) WHERE site_id = (?)'
@@ -32,7 +34,7 @@ DELETE_PROCESSING_STATE = 'TRUNCATE TABLE processing_state'
 # GET_PARSED_OUTPUT_BY_SITEID = 'SELECT * FROM parsed_outputs WHERE site_id = (?)'
 DELETE_PARAMETERS = 'TRUNCATE TABLE parameters'
 
-INCREMENT_RUN_ID = 'INSERT INTO run (last_update) values(NOW())'
+INCREMENT_RUN_ID = 'INSERT INTO run (last_update,state) values(NOW(),%s)'
 GET_LAST_RUN_ID = 'SELECT run_id FROM run ORDER BY run_id DESC LIMIT 1'
 CHECK_RUN_STATE = 'SELECT state FROM run WHERE run_id=%s'
 ABORT_RUN = 'UPDATE run SET state=%s,last_update=NOW() WHERE run_id=%s'

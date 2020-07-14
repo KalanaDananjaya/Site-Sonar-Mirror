@@ -29,28 +29,7 @@ def get_connection(auto_commit=True):
     except mysql.connector.Error as error:
         logging.error("Error while connecting to MySQL", error)
 
-def initialize_db():
-    """
-    Initialize database using SQL File
 
-    Args:
-        SQL_FILE(str): Set from config
-    """
-    cursor,conn = get_connection(auto_commit=False)
-    with open (SQL_FILE,'r') as f:
-        sql_lines = f.read().split(';')
-        sql = f.read()
-        try:
-            cursor.execute(sql)
-            conn.commit()
-            logging.info('Database initialized succesfully')
-        except mysql.connector.Error as error:
-            logging.error("Failed to create tables in MySQL: {}".format(error))
-            conn.rollback()
-        finally:
-            if(conn.is_connected()):
-                cursor.close()
-                conn.close()
 
 def clear_tables(all=False):
     """
@@ -75,20 +54,24 @@ def clear_tables(all=False):
             cursor.close()
             conn.close()
 
+def increment_run_id():
+    cursor,conn = get_connection()
+    try:
+        cursor.execute(INCREMENT_RUN_ID,['STARTED'])
+        logging.debug('Run Id incremented')
+    except mysql.connector.Error as error:
+        logging.error("Failed to increment run id: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
+
 def start_new_run():
     cursor,conn = get_connection()
     run_id = get_run_id()
     run_exists = check_run_exists(run_id)
     if not run_exists:
-        try:
-            cursor.execute(INCREMENT_RUN_ID)
-            logging.debug('Run Id incremented')
-        except mysql.connector.Error as error:
-                logging.error("Failed to increment run id: {}".format(error))
-        finally:
-            if(conn.is_connected()):
-                cursor.close()
-                conn.close()
+        increment_run_id()
     else:
         logging.error("Cannot start a new run as the last run is still running")
 
@@ -97,8 +80,13 @@ def check_run_exists(run_id):
     flag = True
     try:
         cursor.execute(CHECK_RUN_STATE,[run_id])
-        logging.debug('Last run is still running')
-        flag = True
+        state = cursor.fetchone()[0]
+        if state == 'STARTED':
+            logging.debug('Last run is still running')
+            flag = True
+        else:
+            logging.debug('No currently executing runs')
+            flag = False
     except mysql.connector.Error as error:
         logging.error("Failed to increment run id: {}".format(error))
         flag = False
@@ -291,7 +279,160 @@ def get_sitenames():
         if(conn.is_connected()):
             cursor.close()
             conn.close()
-########## UPDATED UPTO HERE
+
+
+def update_processing_state(state,initialize=True):
+    """
+    Update processing_states table
+
+    Return True if succesfull
+    """
+    success_flag = False
+    run_id = get_run_id()
+    cursor, conn = get_connection(auto_commit=False)
+    try:
+        if initialize:
+            site_ids = get_site_ids()
+            state_tuple = []
+            for site_id in site_ids:
+                state_tuple.append((site_id,run_id,state))
+            cursor.executemany(INITIALIZE_PROCESSING_STATE,state_tuple)
+        else:
+            site_ids = get_sites_by_processing_state('WAITING')
+            state_tuple = []
+            for site_id in site_ids:
+                state_tuple.append((state, site_id,run_id))
+            cursor.executemany(UPDATE_PROCESSING_STATE,state_tuple)
+        conn.commit()
+        logging.debug('Update processing states to %s successfully',state)
+        success_flag = True
+    except mysql.connector.Error as error:
+        logging.error("Failed to update processing states: {}".format(error))
+        success_flag = False
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
+        return success_flag
+
+def get_sites_by_processing_state(state):
+    run_id = get_run_id()
+    site_ids = []
+    cursor, conn = get_connection()
+    try: 
+        cursor.execute(GET_SITE_IDS_BY_PROCESSING_STATE,(state,run_id))
+        results = cursor.fetchall()
+        for row in results:
+            site_ids.append(row[0])
+    except mysql.connector.Error as error:
+        logging.error("Failed to fetch processing states: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
+        return site_ids
+        
+# Job related functions
+
+def add_job(job_id,site_id):
+    """
+    Add jobs to the database
+
+    Args:
+        job_id (str): Job ID
+        site_id (int)
+    """
+    cursor, conn = get_connection()
+    try:
+        run_id = get_run_id()
+        cursor.execute(ADD_JOB, (job_id,run_id, site_id, 'STARTED'))
+        logging.debug('Job %s added to database succesfully',job_id.strip())
+    except mysql.connector.Error as error:
+        logging.error("Failed to add job: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
+
+def get_all_job_ids_by_state(state):
+    """
+    Get all jobs in the database with given state
+
+    Args:
+        state (enum): ('STARTED','STALLED','COMPLETED','KILLED')
+
+    Returns:
+        job_ids(list): Job IDs of jobs in given  state
+    """
+    cursor, conn = get_connection()
+    try:
+        run_id = get_run_id()
+        cursor.execute(GET_ALL_JOB_IDS_BY_STATE,[state,run_id])
+        results = cursor.fetchall()
+        job_ids = []
+        for row in results:
+            job_ids.append(row[0])
+        return job_ids
+    except mysql.connector.Error as error:
+        logging.error("Failed to get jobs by state: {}".format(error))
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
+
+def update_job_state_by_job_id(job_id,state):
+    """
+    Update state of the job
+
+    Args:
+        job_id (int): Single id or id list
+        state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
+    """
+    cursor, conn = get_connection(auto_commit=False)
+    run_id = get_run_id()
+    job_tuple = []
+    if type(job_id) == str:
+        job_tuple.append((state,job_id,run_id))
+    elif type(job_id) == list: 
+        for id in job_id:
+            job_tuple.append((state,id,run_id))
+    try:
+        cursor.executemany(UPDATE_JOB_STATE_BY_JOBID, job_tuple)
+        conn.commit()
+    except mysql.connector.Error as error:
+        logging.error("Failed to update job state: {}".format(error))
+        conn.rollback()
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
+
+
+
+
+# def initialize_db():
+#     """
+#     Initialize database using SQL File
+
+#     Args:
+#         SQL_FILE(str): Set from config
+#     """
+#     cursor,conn = get_connection(auto_commit=False)
+#     with open (SQL_FILE,'r') as f:
+#         sql_lines = f.read().split(';')
+#         sql = f.read()
+#         try:
+#             cursor.execute(sql)
+#             conn.commit()
+#             logging.info('Database initialized succesfully')
+#         except mysql.connector.Error as error:
+#             logging.error("Failed to create tables in MySQL: {}".format(error))
+#             conn.rollback()
+#         finally:
+#             if(conn.is_connected()):
+#                 cursor.close()
+#                 conn.close()
+
 # def get_num_nodes_in_site(site_id):
 #     """
 #     Get the number of nodes in site
@@ -489,34 +630,6 @@ def get_sitenames():
 #             cursor.close()
 #             conn.close()
 
-def initialize_processing_state():
-    """
-    Initialize processing_states table
-
-    Return True if succesfull
-    """
-    success_flag = False
-    site_ids = get_site_ids()
-    run_id = get_run_id()
-    state_tuple = []
-    for site_id in site_ids:
-        state_tuple.append((site_id,run_id,'WAITING'))
-    cursor, conn = get_connection(auto_commit=False)
-    try:
-        cursor.executemany(INITIALIZE_PROCESSING_STATE,state_tuple)
-        conn.commit()
-        logging.debug('Initialized processing states successfully')
-        success_flag = True
-    except mysql.connector.Error as error:
-        logging.error("Failed to initialize processing states: {}".format(error))
-        success_flag = False
-    finally:
-        if(conn.is_connected()):
-            cursor.close()
-            conn.close()
-        return success_flag
-        
-
 # def update_processing_state(site_id,state):
 #     """
 #     Update the current processing state of the site
@@ -566,27 +679,7 @@ def initialize_processing_state():
 #     except sqlite3.Error as error:
 #         logging.exception("Error while executing the query: %s", error)
 
-# Job related functions
 
-def add_job(job_id,site_id):
-    """
-    Add jobs to the database
-
-    Args:
-        job_id (str): Job ID
-        site_id (int)
-    """
-    cursor, conn = get_connection()
-    try:
-        run_id = get_run_id()
-        cursor.execute(ADD_JOB, (job_id,run_id, site_id, 'STARTED'))
-        logging.debug('Job %s added to database succesfully',job_id)
-    except mysql.connector.Error as error:
-        logging.error("Failed to add job: {}".format(error))
-    finally:
-        if(conn.is_connected()):
-            cursor.close()
-            conn.close()
 
 
 # def get_all_jobs_by_site_id(site_id):
@@ -610,31 +703,7 @@ def add_job(job_id,site_id):
 #     except sqlite3.Error as error:
 #         logging.exception("Error while executing the query: %s", error)
 
-def get_all_job_ids_by_state(state):
-    """
-    Get all jobs in the database with given abstract state
 
-    Args:
-        state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
-
-    Returns:
-        job_ids(list): Job IDs of jobs in given  state
-    """
-    cursor, conn = get_connection()
-    try:
-        run_id = get_run_id()
-        cursor.execute(GET_ALL_JOB_IDS_BY_STATE,[state,run_id])
-        results = cursor.fetchall()
-        job_ids = []
-        for row in results:
-            job_ids.append(row[0])
-        return job_ids
-    except mysql.connector.Error as error:
-        logging.error("Failed to get jobs by state: {}".format(error))
-    finally:
-        if(conn.is_connected()):
-            cursor.close()
-            conn.close()
 
 # def get_jobs_by_siteid_and_abs_state(site_id,abstract_state):
 #     """
@@ -669,29 +738,3 @@ def get_all_job_ids_by_state(state):
 #     except sqlite3.Error as error:
 #         logging.exception("Error while executing the query: %s", error)
 
-def update_job_state_by_job_id(job_id,state):
-    """
-    Update state of the job
-
-    Args:
-        job_id (int): Single id or id list
-        state (enum): ('STARTED','ERROR','STALLED','COMPLETED','KILLED')
-    """
-    cursor, conn = get_connection(auto_commit=False)
-    run_id = get_run_id()
-    job_tuple = []
-    if type(job_id) == str:
-        job_tuple.append((state,job_id,run_id))
-    elif type(job_id) == list: 
-        for id in job_id:
-            job_tuple.append((state,id,run_id))
-    try:
-        cursor.executemany(UPDATE_JOB_STATE_BY_JOBID, job_tuple)
-        conn.commit()
-    except mysql.connector.Error as error:
-        logging.error("Failed to update job state: {}".format(error))
-        conn.rollback()
-    finally:
-        if(conn.is_connected()):
-            cursor.close()
-            conn.close()

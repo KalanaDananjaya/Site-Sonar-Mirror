@@ -49,7 +49,7 @@ def job_submission(jdl_name):
 
     """
     site_details = get_sites()
-    success_flag = initialize_processing_state()
+    success_flag = update_processing_state('WAITING',initialize=True)
     if success_flag:
         job_path = GRID_USER_HOME + '/' + GRID_SITE_SONAR_HOME + '/JDL/' + jdl_name
 

@@ -11,11 +11,11 @@ CREATE TABLE processing_state
 (site_id int NOT NULL,
 run_id int NOT NULL,
 last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-state ENUM ('WAITING','COMPLETE','ERRONEOUS')  NOT NULL,
-started_job_count int,
+state ENUM ('WAITING','COMPLETED','STALLED','ABORTED')  NOT NULL,
+running_job_count int,
 completed_job_count int,
 killed_job_count int,
-PRIMARY KEY(site_id,run_id)); -- Remove Erroneous state
+PRIMARY KEY(site_id,run_id)); 
 
 DROP TABLE IF EXISTS nodes;
 CREATE TABLE nodes
@@ -46,5 +46,5 @@ DROP TABLE IF EXISTS run;
 CREATE TABLE run
 (run_id int PRIMARY KEY AUTO_INCREMENT,
 last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-state ENUM ('STARTED','COMPLETED','ABORTED')
+state ENUM ('STARTED','COMPLETED','TIMED_OUT','ABORTED')
 );
