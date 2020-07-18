@@ -1,2 +1,2 @@
-pyeda
-python-dateutil
+mysql_connector_python==8.0.17
+python_dateutil==2.8.1

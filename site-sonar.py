@@ -86,11 +86,15 @@ def abort(args):
                 else:
                     start += 500
                     end += 500
-            update_job_state_by_job_id(job_ids,'KILLED')
-            abort_proc_state = update_processing_state('ABORTED',initialize=False)
-            change_run_state('ABORTED')
+            update_job_state_by_job_id(job_ids,'KILLED') 
         else:
             logging.info("No jobs to kill")
+        if args.clean:
+            abort_proc_state = update_processing_state('STALLED',initialize=False)
+            change_run_state('TIMED_OUT')
+        else:
+            abort_proc_state = update_processing_state('ABORTED',initialize=False)
+            change_run_state('ABORTED')
 
             
     # Kill jobs with given ids
@@ -144,9 +148,10 @@ search_parser.add_argument('-sid','--site_id', help = 'ID of the Grid site')
 search_parser.add_argument('-st','--section.title', help = 'Title of the section')
 search_parser.set_defaults(func=search)
 
-abort_parser = subparsers.add_parser('kill')
+abort_parser = subparsers.add_parser('abort')
 abort_parser.add_argument('-id','--job_id',help='Comma separated job IDs to kill')
-abort_parser.add_argument('-a','--all',action='store_true',help ='Kill all the running jobs')
+abort_parser.add_argument('-a','--all',action='store_false',help ='Kill all the running jobs. Set to false to kill selected jobs')
+abort_parser.add_argument('-c','--clean',action='store_true',help='Kill all remaining jobs and mark all remaining jobs'
 abort_parser.set_defaults(func=abort)
 
 reset_parser = subparsers.add_parser('reset')
