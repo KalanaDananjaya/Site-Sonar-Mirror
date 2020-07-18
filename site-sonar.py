@@ -13,7 +13,6 @@ from processes import job_submission, clear_grid_output_dir, search_results
 # CLI Functions
 def init(args):
     clear_grid_output_dir()
-    clear_output_dir(OUTPUT_FOLDER) 
     clear_tables(all=True)
     add_sites_from_csv(SITES_CSV_FILE)
     increment_run_id()
@@ -21,7 +20,6 @@ def init(args):
 
 def reset(args):
     clear_grid_output_dir()
-    clear_output_dir(OUTPUT_FOLDER)
     start_new_run()
     logging.info('Fresh environment started for a new run')
 
@@ -41,9 +39,8 @@ def submit_jobs(args):
 
 
 def fetch_results(args):
-    dirName = RESULTS_DOWNLOAD_FOLDER
-    absPath = os.getcwd() + '/' + dirName
-    if os.path.exists(dirName):
+    absPath = os.getcwd() + '/' + OUTPUT_FOLDER
+    if os.path.exists(OUTPUT_FOLDER):
         shutil.rmtree(absPath)
         os.mkdir(absPath)
     logging.info('Downloading the results to %s',absPath) 
