@@ -61,5 +61,3 @@ PRIMARY KEY (job_id,paramName),
 FOREIGN KEY (site_id) references sites(site_id),
 FOREIGN KEY (run_id) references run(run_id),
 FOREIGN KEY (job_id) references jobs(job_id));
-
-
