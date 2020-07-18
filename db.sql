@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS processing_state;
 CREATE TABLE processing_state
 (site_id int NOT NULL,
 run_id int NOT NULL,
+started_at TIMESTAMP NOT NULL,
 last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 state ENUM ('WAITING','COMPLETED','STALLED','ABORTED')  NOT NULL,
 running_job_count int,
@@ -29,13 +30,15 @@ CREATE TABLE jobs
 (job_id int NOT NULL PRIMARY KEY,
 run_id int NOT NULL,
 site_id int NOT NULL,
+started_at TIMESTAMP NOT NULL,
 last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 job_state ENUM ('STARTED','STALLED','COMPLETED','KILLED')  NOT NULL); 
 
 DROP TABLE IF EXISTS parameters;
 CREATE TABLE parameters
-(job_id int NOT NULL,
+(job_id int NOT NULL, 
 run_id int NOT NULL,
+site_id int NOT NULL,
 node_id int NOT NULL,
 paramName varchar(500) NOT NULL,
 paramValue varchar(500) NOT NULL,
@@ -45,6 +48,7 @@ PRIMARY KEY (job_id,paramName));
 DROP TABLE IF EXISTS run;
 CREATE TABLE run
 (run_id int PRIMARY KEY AUTO_INCREMENT,
+started_at TIMESTAMP NOT NULL,
 last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 state ENUM ('STARTED','COMPLETED','TIMED_OUT','ABORTED')
 );

@@ -151,7 +151,7 @@ search_parser.set_defaults(func=search)
 abort_parser = subparsers.add_parser('abort')
 abort_parser.add_argument('-id','--job_id',help='Comma separated job IDs to kill')
 abort_parser.add_argument('-a','--all',action='store_false',help ='Kill all the running jobs. Set to false to kill selected jobs')
-abort_parser.add_argument('-c','--clean',action='store_true',help='Kill all remaining jobs and mark all remaining jobs'
+abort_parser.add_argument('-c','--clean',action='store_true',help='Kill all remaining jobs and mark all remaining jobs')
 abort_parser.set_defaults(func=abort)
 
 reset_parser = subparsers.add_parser('reset')
