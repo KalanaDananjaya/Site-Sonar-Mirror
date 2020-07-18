@@ -18,7 +18,7 @@ def init(args):
     logging.info('Database initialized using %s file',SITES_CSV_FILE)
 
 def reset(args):
-    clear_grid_output_dir()
+    #clear_grid_output_dir()
     start_new_run()
     logging.info('Fresh environment started for a new run')
 
