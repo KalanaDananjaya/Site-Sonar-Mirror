@@ -55,9 +55,16 @@ run_id int NOT NULL,
 site_id int NOT NULL,
 node_id int NOT NULL,
 paramName varchar(500) NOT NULL,
-paramValue varchar(500) NOT NULL,
+paramValue TEXT NOT NULL,
 last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 PRIMARY KEY (job_id,paramName),
 FOREIGN KEY (site_id) references sites(site_id),
 FOREIGN KEY (run_id) references run(run_id),
 FOREIGN KEY (job_id) references jobs(job_id));
+
+DROP TABLE IF EXISTS keys;
+CREATE TABLE keys
+(run_id int NOT NULL PRIMARY KEY,
+key_list TEXT NOT NULL,
+FOREIGN KEY (run_id) references run(run_id)
+);
