@@ -62,10 +62,11 @@ def abort(args):
         job_ids = started_job_ids + stalled_job_ids
         num_jobs = len(job_ids)
         if num_jobs != 0:
+            logging.debug('Started killing %d jobs...',num_jobs)
             start = 0
             end = 500
             while True:
-                logging.debug('Started killing %d jobs...',num_jobs)
+                logging.debug('Killing %d to %d jobs',start,end)
                 if (end > num_jobs):
                     end = num_jobs
                 job_ids_slice = job_ids[start:end]

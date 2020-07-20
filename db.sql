@@ -33,7 +33,7 @@ CREATE TABLE nodes
 (node_id INTEGER PRIMARY KEY AUTO_INCREMENT,
 run_id int NOT NULL,
 site_id int NOT NULL,
-node_name varchar(50) NOT NULL,
+node_name varchar(250) NOT NULL,
 FOREIGN KEY (site_id) references sites(site_id),
 FOREIGN KEY (run_id) references run(run_id));
 

@@ -54,7 +54,10 @@ def job_submission(jdl_name):
         job_path = GRID_USER_HOME + '/' + GRID_SITE_SONAR_HOME + '/JDL/' + jdl_name
 
         for site in site_details:
-            num_jobs = JOB_FACTOR * site['num_nodes']+1
+            num_nodes = site['num_nodes']
+            if num_nodes == -1 :
+                num_nodes = 40
+            num_jobs = JOB_FACTOR * num_nodes +1
             sitename = site['site_name']
             logging.info('Submitting %s jobs to the Grid site %s',str(num_jobs - 1), sitename)
             for i in range(1, num_jobs):
