@@ -6,10 +6,10 @@ JOB_FACTOR          = 2                                 # Factor of jobs to subm
 GRID_SITE_SONAR_OUTPUT_DIR  = 'site-sonar/outputs'      # Relative path from User's Grid Home to results output directory
 
 # Database configs 
-DB_HOST     = 'remotemysql.com'
-DB_USER     = 'D8h8sG8cqZ'
-DB_PWD      = 'avMnBqDCal'
-DB_DATABASE = 'D8h8sG8cqZ'
+DB_HOST     = ''
+DB_USER     = ''
+DB_PWD      = ''
+DB_DATABASE = ''
 
 # General configs
 LOG_FILE                    = 'site-sonar.log'
@@ -21,5 +21,5 @@ FULL_SITES_CSV_FILE     = 'updated_ce_list.csv'
 SHORT_SITES_CSV_FILE    = 'ce_short_list.csv'
 MEDIUM_SITES_CSV_FILE   = 'medium_ce_list.csv'
 
-SITES_CSV_FILE = TEST_SITES_CSV_FILE # Set to FULL_SITES_CSV_FILE in production env
+SITES_CSV_FILE = FULL_SITES_CSV_FILE # Set to FULL_SITES_CSV_FILE in production env
 
