@@ -7,8 +7,6 @@ from subprocess import Popen,PIPE, CalledProcessError
 
 from config import *
 from db_connection import *
-#from output_parser import clear_output_dir
-
 
 # Utils
 def escape_string(string):
@@ -51,6 +49,9 @@ def job_submission(jdl_name):
     site_details = get_sites()
     success_flag = update_processing_state('WAITING',initialize=True)
     if success_flag:
+        from scripts.stat import monitors 
+        job_keys = json.dumps(list(monitors.keys()))
+        add_job_keys(job_keys)
         job_path = GRID_USER_HOME + '/' + GRID_SITE_SONAR_HOME + '/JDL/' + jdl_name
 
         for site in site_details:

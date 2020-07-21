@@ -26,3 +26,6 @@ GET_LAST_RUN_ID = 'SELECT run_id FROM run ORDER BY run_id DESC LIMIT 1'
 CHECK_RUN_STATE = 'SELECT state FROM run WHERE run_id=%s'
 ABORT_RUN = 'UPDATE run SET state=%s,last_update=NOW() WHERE run_id=%s'
 DELETE_RUN = 'TRUNCATE TABLE run'
+
+ADD_KEYS = 'INSERT INTO job_keys (run_id,key_list) VALUES (%s,%s)'
+DELETE_KEYS = 'TRUNCATE TABLE job_keys'

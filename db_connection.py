@@ -41,6 +41,7 @@ def clear_tables(all=False):
         if all:
             cursor.execute(DELETE_SITES)
             cursor.execute(DELETE_RUN)
+            cursor.execute(DELETE_KEYS)
         cursor.execute(DELETE_NODES)
         cursor.execute(DELETE_PROCESSING_STATE)
         cursor.execute(DELETE_PARAMETERS)
@@ -306,7 +307,7 @@ def update_processing_state(state,initialize=True):
                 state_tuple.append((state, site_id,run_id))
             cursor.executemany(UPDATE_PROCESSING_STATE,state_tuple)
         conn.commit()
-        logging.debug('Update processing states to %s successfully',state)
+        logging.debug('Updated processing states to %s successfully',state)
         success_flag = True
     except mysql.connector.Error as error:
         logging.error("Failed to update processing states: {}".format(error))
@@ -404,6 +405,25 @@ def update_job_state_by_job_id(job_id,state):
     except mysql.connector.Error as error:
         logging.error("Failed to update job state: {}".format(error))
         conn.rollback()
+    finally:
+        if(conn.is_connected()):
+            cursor.close()
+            conn.close()
+
+def add_job_keys(keys):
+    """
+    Add jobs keys to the database
+
+    Args:
+        keys (str): Key list of the commands in the job script
+    """
+    cursor, conn = get_connection()
+    try:
+        run_id = get_run_id()
+        cursor.execute(ADD_KEYS, (run_id, keys))
+        logging.debug('Job key list %s added to database succesfully',keys)
+    except mysql.connector.Error as error:
+        logging.error("Failed to add job keys: {}".format(error))
     finally:
         if(conn.is_connected()):
             cursor.close()
