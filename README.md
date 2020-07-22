@@ -1,19 +1,51 @@
-# Site-Sonar
+# Site Sonar Job Submission Tool
+This repository contains the source code for a Site Sonar Job Submission Tool. This tool is used to automate the submission of jobs to the WLCG to analyse the Grid site information.
 
-A CLI tool to Retrieve the information of Grid nodes and analyze them
+## Prerequisites:
+Please make sure following prerequisites are met before starting the program.
+* Start a MySQL instance and source the `db.sql` SQL file to create the database
+* Update the database configurations and grid configurations in `config.py`
+* Update the job script with your desired commands 
+* Enter the `xjalienfs` environment
+* Start Site Sonar MonAlisa client
 
-Use the following command to run the tool
+## Updating the Job Script
+* The job script is available at `scripts/stat.py`
+* Make sure you change only the `monitors` variable in the job script
+* The `monitors` is a python dictionary of the following format
+> monitors = { identifier : command, identifier : command }
+> The identifier will be used as the key when searching the collected information
 
-nohup python3 site-sonar.py bg -s &
+## Running the Program
+If you are running the tool on a local instance, initialized the database using `python3 site-sonar.py init`
+> This command is intended to be used only for development purposes. It will be removed in the future. Run only once.
 
-python3 site-sonar.py init
-python3 site-sonar.py reset
-python3 site-sonar.py stage
-python3 site-sonar.py submit
-python3 site-sonar.py monitor
-python3 site-sonar.py fetch
-python3 site-sonar.py parse
-python3 site-sonar.py kill -a
+Use the command `python3 site-sonar.py submit` to start job submission 
 
-python3 site-sonar.py search 'key:value'
-python3 site-sonar.py search -q 'Underlay: enable underlay = yes' -sid 1
+> The job results will be added to the database by Site Sonar MonAlisa client.
+
+> A full grid run will take around 24 hours. Therefore use `nohup <command> &` to run the `submit` command
+
+## Aborting a Run
+
+If you want to abort the current run use the command `python3 site-sonar.py abort`
+> If the tool is running in the background, make sure to bring it to the foreground before using the above command
+
+> If you abort a run, its data will not be available for searching
+
+## Finishing a Run
+The run will be marked as `COMPLETED` if any of the following conditions are met.
+* All the Grid Sites are marked as `STALLED` or `COMPLETED`
+> A Grid site will be marked as `COMPLETED` if 90% of the jobs submitted to it have finished the excution.
+> A Grid site will be marked as `STALLED` if none of its jobs have run since 12 hours from the last job execution.
+
+* The run will be marked as `TIMED_OUT` if none of the jobs have completed since 24 hours from the last job execution
+
+A `COMPLETED` or `TIMED_OUT` run is considered as a finished run and its data will be available for search in the website.
+
+* There is a possibility that the run won't meet either of the above conditions. The run will have to be manually marked as `TIMED_OUT` in such a case. Use the command `python3 site-sonar.py abort --clean` for this.
+> The remaining jobs will be killed when `abort` command is used
+
+## Starting a New Run
+* To start a new run, start a fresh environment by using the command `python3 site-sonar.py reset`
+* Submit the jobs using `python3 site-sonar.py submit`
