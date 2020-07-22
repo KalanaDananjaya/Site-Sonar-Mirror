@@ -158,7 +158,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',level=get_log_lvl(args.log.lower()), 
     handlers=[
-        logging.FileHandler(LOG_FILE,'w'),
+        logging.FileHandler(LOG_FILE),
         logging.StreamHandler() 
         ])
     logging.info('Site Sonar application started')
