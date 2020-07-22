@@ -59,4 +59,6 @@ if __name__ == "__main__":
 
     time.sleep(10)
     apm.sendParameters("SiteSonar", jobId + "_" + hostname , {"state": "complete"})
+    time.sleep(30)
     print("Job Completed")
+    
