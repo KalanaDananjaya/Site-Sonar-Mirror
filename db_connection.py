@@ -9,12 +9,13 @@ from sql_queries import *
 
 import mysql.connector
 
+
 # Utils
 def normalize_ce_name(target_ce):
     return target_ce.replace("::", "_").lower()[len("alice_"):]
 
-# Connection Functions
 
+# Connection Functions
 def get_connection(auto_commit=True):
     try:
         connection = mysql.connector.connect(
@@ -28,7 +29,6 @@ def get_connection(auto_commit=True):
         return cursor,connection
     except mysql.connector.Error as error:
         logging.error("Error while connecting to MySQL", error)
-
 
 
 def clear_tables(all=False):
@@ -57,6 +57,7 @@ def clear_tables(all=False):
             cursor.close()
             conn.close()
 
+
 def increment_run_id():
     cursor,conn = get_connection()
     try:
@@ -69,6 +70,7 @@ def increment_run_id():
             cursor.close()
             conn.close()
 
+
 def start_new_run():
     cursor,conn = get_connection()
     run_id = get_run_id()
@@ -77,6 +79,7 @@ def start_new_run():
         increment_run_id()
     else:
         logging.error("Cannot start a new run as the last run is still running")
+
 
 def check_run_exists(run_id):
     cursor,conn = get_connection()
@@ -99,6 +102,7 @@ def check_run_exists(run_id):
             conn.close()
         return flag
 
+
 def change_run_state(state):
     run_id = get_run_id()
     cursor,conn = get_connection()
@@ -112,6 +116,7 @@ def change_run_state(state):
             cursor.close()
             conn.close()
 
+
 def get_run_id():
     cursor, conn = get_connection()
     try:
@@ -124,6 +129,7 @@ def get_run_id():
         if(conn.is_connected()):
             cursor.close()
             conn.close()
+
 
 # Site Related Functions
 def get_sites():
@@ -160,6 +166,7 @@ def get_sites():
             cursor.close()
             conn.close()
 
+
 def get_site_ids():
     """
     Get Site IDs
@@ -182,6 +189,7 @@ def get_site_ids():
         if(conn.is_connected()):
             cursor.close()
             conn.close()
+
 
 def add_sites_from_csv(csv_filename):
     """
@@ -224,6 +232,7 @@ def add_sites_from_csv(csv_filename):
             conn.close()
             logging.debug("connection is closed")
 
+
 def update_site_last_update_time(site_id):
     """
     Update last update time of the site
@@ -260,6 +269,7 @@ def check_sitename_exists(sitenames,current_site_name):
             return True
         else:
             return False
+
 
 def get_sitenames():
     """
@@ -318,6 +328,7 @@ def update_processing_state(state,initialize=True):
             conn.close()
         return success_flag
 
+
 def get_sites_by_processing_state(state):
     run_id = get_run_id()
     site_ids = []
@@ -334,9 +345,9 @@ def get_sites_by_processing_state(state):
             cursor.close()
             conn.close()
         return site_ids
-        
-# Job related functions
 
+
+# Job related functions
 def add_job(job_id,site_id):
     """
     Add jobs to the database
@@ -356,6 +367,7 @@ def add_job(job_id,site_id):
         if(conn.is_connected()):
             cursor.close()
             conn.close()
+
 
 def get_all_job_ids_by_state(state):
     """
@@ -383,6 +395,7 @@ def get_all_job_ids_by_state(state):
             cursor.close()
             conn.close()
 
+
 def update_job_state_by_job_id(job_id,state):
     """
     Update state of the job
@@ -409,6 +422,7 @@ def update_job_state_by_job_id(job_id,state):
         if(conn.is_connected()):
             cursor.close()
             conn.close()
+
 
 def add_job_keys(keys):
     """
