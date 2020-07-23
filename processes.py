@@ -88,11 +88,10 @@ def job_submission(jdl_name):
 def stage_jobs_to_grid(dirname):
     GRID_DIR = "{}/{}/{}".format(GRID_USER_HOME, GRID_SITE_SONAR_HOME, dirname)
     command = "alien.py rm -rf {}/*".format(GRID_DIR)
-    print (command)
     with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
         logging.info('Clearing %s grid directory...', GRID_DIR)
         for line in p.stdout:
-            logging.info('> %s ', line)
+            logging.info('> %s ', line.rstrip())
     if p.returncode != 0 and p.returncode !=2:
         raise CalledProcessError(p.returncode, p.args)
 
@@ -101,6 +100,6 @@ def stage_jobs_to_grid(dirname):
         with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
             logging.info('Staging jobs ./%s/%s to %s/%s', dirname, file, GRID_DIR, file)
             for line in p.stdout:
-                logging.info('> %s ', line)
+                logging.info('> %s ', line.rstrip())
         if p.returncode != 0:
             raise CalledProcessError(p.returncode, p.args)
