@@ -56,9 +56,7 @@ if __name__ == "__main__":
             print (value)
         apm.sendParameters("SiteSonar", jobId + "_" + hostname , {str(key): str(value)})
         time.sleep(.005)
-
-    time.sleep(10)
     apm.sendParameters("SiteSonar", jobId + "_" + hostname , {"state": "complete"})
-    time.sleep(30)
+    time.sleep(300)
     print("Job Completed")
     
