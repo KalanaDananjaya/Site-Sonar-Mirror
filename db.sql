@@ -28,15 +28,6 @@ PRIMARY KEY(site_id,run_id),
 FOREIGN KEY (site_id) references sites(site_id),
 FOREIGN KEY (run_id) references run(run_id)); 
 
-DROP TABLE IF EXISTS nodes;
-CREATE TABLE nodes
-(node_id INTEGER PRIMARY KEY AUTO_INCREMENT,
-run_id int NOT NULL,
-site_id int NOT NULL,
-node_name varchar(250) NOT NULL,
-FOREIGN KEY (site_id) references sites(site_id),
-FOREIGN KEY (run_id) references run(run_id));
-
 DROP TABLE IF EXISTS jobs;
 CREATE TABLE jobs
 (job_id int NOT NULL PRIMARY KEY,
@@ -47,6 +38,17 @@ last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMES
 job_state ENUM ('STARTED','STALLED','COMPLETED','KILLED')  NOT NULL,
 FOREIGN KEY (site_id) references sites(site_id),
 FOREIGN KEY (run_id) references run(run_id)); 
+
+DROP TABLE IF EXISTS nodes;
+CREATE TABLE nodes
+(node_id INTEGER PRIMARY KEY AUTO_INCREMENT,
+run_id int NOT NULL,
+site_id int NOT NULL,
+job_id int NOT NULL,
+node_name varchar(250) NOT NULL,
+FOREIGN KEY (site_id) references sites(site_id),
+FOREIGN KEY (run_id) references run(run_id),
+FOREIGN KEY (job_id) references jobs(job_id));
 
 DROP TABLE IF EXISTS parameters;
 CREATE TABLE parameters
