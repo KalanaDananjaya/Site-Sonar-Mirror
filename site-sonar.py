@@ -60,9 +60,9 @@ def abort(args):
             start = 0
             end = 500
             while True:
-                logging.debug('Killing %d to %d jobs',start,end)
                 if (end > num_jobs):
                     end = num_jobs
+                logging.debug('Killing %d to %d jobs',start,end)
                 job_ids_slice = job_ids[start:end]
                 job_ids_slice_string = ' '.join(map(str,job_ids_slice))
                 command = 'alien.py kill {}'.format(job_ids_slice_string)
