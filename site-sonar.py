@@ -78,7 +78,7 @@ def abort(args):
                 else:
                     start += 500
                     end += 500
-            update_job_state_by_job_id(job_ids,'KILLED') 
+                update_job_state_by_job_id(job_ids_slice,'KILLED') 
         else:
             logging.info("No jobs to kill")
         if args.clean:
