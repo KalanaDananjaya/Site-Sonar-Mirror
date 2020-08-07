@@ -21,5 +21,8 @@ FULL_SITES_CSV_FILE     = 'updated_ce_list.csv'
 SHORT_SITES_CSV_FILE    = 'ce_short_list.csv'
 MEDIUM_SITES_CSV_FILE   = 'medium_ce_list.csv'
 
-SITES_CSV_FILE = FULL_SITES_CSV_FILE # Set to FULL_SITES_CSV_FILE in production env
+SITES_CSV_FILE = TEST_SITES_CSV_FILE # Set to FULL_SITES_CSV_FILE in production env
+
+# Search Backend configs
+BACKEND_URL = 'http://localhost:5000'
 

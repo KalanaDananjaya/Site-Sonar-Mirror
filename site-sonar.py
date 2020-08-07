@@ -101,6 +101,96 @@ def abort(args):
     else:
         logging.info('No Job IDs were given to kill or failed to retrieve the Job IDs from the database')
 
+def summary(args):
+    import requests,json
+    from prettytable import PrettyTable
+
+    if args.run_id:
+        url = BACKEND_URL +'/run_summary'
+        res = requests.post(url, json = {'RunId': args.run_id})
+        res = json.loads(res.text)
+        table = PrettyTable(['Site Id', 'Site Name', 'Total Nodes', 'Covered Nodes', 'Coverage'])
+        for element in res:
+            table.add_row([element['site_id'], element['sitename'], element['total_nodes'], element['covered_nodes'], element['coverage']])
+        print(table)
+        
+    else:
+        url = BACKEND_URL +'/all_runs'
+        res = requests.get(url)
+        res = json.loads(res.text)
+        table = PrettyTable(['Run Id', 'Started At', 'Finished At', 'State'])
+        for element in res['all_runs']:
+            table.add_row([element['run_id'], element['started_at'], element['finished_at'], element['state']])
+        pritn(table)
+
+def search(args):
+    import requests,json
+    from prettytable import PrettyTable
+
+    key_val = {}
+    for element in args.query :
+        key_val.update({element[0]:{
+            'query_key': element[1].split(':')[0].strip(),
+            'query_value': element[1].split(':')[1].strip()
+        }})
+    if args.site_id:
+        data = {
+            'SearchFields': key_val,
+            'Equation': args.equation,
+            'SiteId': args.site_id,
+            'RunId': args.run_id
+        }
+    else:
+        data = {
+            'SearchFields': key_val,
+            'Equation': args.equation,
+            'SiteId': 'all',
+            'RunId': args.run_id
+        }
+    url = BACKEND_URL +'/search_site'
+    res = requests.post(url, json={'SearchFormInput': data})
+    res = json.loads(res.text)
+
+    if res['grid_search']:
+        total_sites = res['total_sites']
+        covered_sites = res['covered_sites']
+        matching_sites = res['matching_sites']
+        matching_sites_list = res['matching_sites_list']
+        unmatching_sites_list = res['unmatching_sites_list']
+        incomplete_sites_list = res['incomplete_sites_list']
+
+        result_table = PrettyTable(['Total Sites', 'Covered Sites', 'Matching Sites', 'Matching Percentage'])
+        result_table.add_row([total_sites, covered_sites, matching_sites, (matching_sites/covered_sites)*100])
+        print(result_table)
+
+        site_table = PrettyTable(['Site Name', 'State'])
+        for site in matching_sites_list:
+            site_table.add_row([site, 'Matching'])
+        for site in unmatching_sites_list:
+            site_table.add_row([site, 'Not Matching'])
+        for site in incomplete_sites_list:
+            site_table.add_row([site, 'N/A'])
+        print(site_table)
+    
+    else:
+        total_nodes = res['total_nodes']
+        covered_nodes = res['covered_nodes']
+        matching_nodes = res['matching_nodes']
+        matching_nodes_data = res['matching_nodes_data']
+        unmatching_nodes_data = res['unmatching_nodes_data']
+
+        result_table = PrettyTable(['Total Nodes', 'Covered Nodes', 'Matching Nodes', 'Matching Percentage'])
+        result_table.add_row([total_nodes, covered_nodes, matching_nodes, (matching_nodes/covered_nodes)*100])
+        print(result_table)
+
+        from textwrap import fill
+        node_table = PrettyTable(['Node Name', 'State', 'Data'],align='l')
+        for key in matching_nodes_data:
+            node_table.add_row([key, 'Matching', fill(str(matching_nodes_data[key]), width=70)])
+        for node in unmatching_nodes_data:
+            node_table.add_row([key, 'Not Matching', fill(str(unmatching_nodes_data[key]), width=70)])
+        print (node_table)
+
 
 def get_log_lvl(lvl):
     levels = {
@@ -140,6 +230,17 @@ abort_parser.set_defaults(func=abort)
 
 reset_parser = subparsers.add_parser('reset')
 reset_parser.set_defaults(func=reset)
+
+summary_parser = subparsers.add_parser('summary')
+summary_parser.add_argument('-r', '--run_id', default=None, help='Run ID')
+summary_parser.set_defaults(func=summary)
+
+search_parser = subparsers.add_parser('search')
+search_parser.add_argument('-s', '--site_id', default=None, help='Site ID')
+search_parser.add_argument('-q', '--query', action='append', required=True, type=lambda kv: kv.split("="), help='Search Query Dictionary')
+search_parser.add_argument('-eq', '--equation', required=True, help='Search Query Dictionary')
+search_parser.add_argument('-r', '--run_id', required=True, help='Run ID')
+search_parser.set_defaults(func=search)
 
 if __name__ == '__main__':
 
