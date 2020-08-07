@@ -69,7 +69,8 @@ def abort(args):
                 with Popen(shlex.split(command), stdout=PIPE, bufsize=1, universal_newlines=True) as p:
                     for line in p.stdout:
                         logging.debug('> %s ',line) 
-                if p.returncode != 0:
+                # Exit code 121 is returned if the job does not exists/cannot be killed - It is not caught as an exception
+                if p.returncode != 0 and p.returncode != 121:
                     raise CalledProcessError(p.returncode, p.args)
                 if end == num_jobs:
                     logging.info ('Total of %d jobs killed succesfully',num_jobs)
@@ -110,9 +111,16 @@ def summary(args):
         res = requests.post(url, json = {'RunId': args.run_id})
         res = json.loads(res.text)
         table = PrettyTable(['Site Id', 'Site Name', 'Total Nodes', 'Covered Nodes', 'Coverage'])
+        tot_nodes = 0
+        covered_nodes = 0
         for element in res:
             table.add_row([element['site_id'], element['sitename'], element['total_nodes'], element['covered_nodes'], element['coverage']])
+            tot_nodes += int(element['total_nodes'])
+            covered_nodes += int(element['covered_nodes'])
         print(table)
+        print('Total Sites Attempted:', len(res))
+        print('Total Nodes in Attempted Sites:', tot_nodes)
+        print('Covered Nodes in Attempted Sites:', covered_nodes )
         
     else:
         url = BACKEND_URL +'/all_runs'
@@ -121,7 +129,7 @@ def summary(args):
         table = PrettyTable(['Run Id', 'Started At', 'Finished At', 'State'])
         for element in res['all_runs']:
             table.add_row([element['run_id'], element['started_at'], element['finished_at'], element['state']])
-        pritn(table)
+        print(table)
 
 def search(args):
     import requests,json
