@@ -51,9 +51,7 @@ def fetch_results(args):
 def abort(args):
     # Kill all jobs
     if args.all:
-        started_job_ids = get_all_job_ids_by_state('STARTED')
-        stalled_job_ids = get_all_job_ids_by_state('STALLED')
-        job_ids = started_job_ids + stalled_job_ids
+        job_ids = get_all_job_ids_by_state('STARTED')
         num_jobs = len(job_ids)
         if num_jobs != 0:
             logging.debug('Started killing %d jobs...',num_jobs)
@@ -118,16 +116,32 @@ def summary(args):
             tot_nodes += int(element['total_nodes'])
             covered_nodes += int(element['covered_nodes'])
         print(table)
+
+        started_job_num = len(get_all_job_ids_by_state('STARTED'))
+        completed_job_num = len(get_all_job_ids_by_state('COMPLETED'))
+        killed_job_num = len(get_all_job_ids_by_state('KILLED'))
+
+        url = BACKEND_URL +'/jobs'
+        res = requests.post(url, json = {'RunId': args.run_id})
+        res = json.loads(res.text)
+
+        print ("============== Node Coverage Summary ==============+")
         print('Total Sites Attempted:', len(res))
         print('Total Nodes in Attempted Sites:', tot_nodes)
         print('Covered Nodes in Attempted Sites:', covered_nodes )
-        
+
+        print ("============== Job Completion Summary ==============")
+        print('Total Started Jobs:', res['started_jobs'])
+        print('Total Completed Jobs:', res['completed_jobs'])
+        print('Total Killed Jobs:', res['killed_jobs'])
+        print('Job Completion Percentage:', round((res['completed_jobs']/(res['started_jobs']+res['completed_jobs']+res['killed_jobs']))*100),'%')
+
     else:
-        url = BACKEND_URL +'/all_runs'
+        url = BACKEND_URL +'/all_runs_cli'
         res = requests.get(url)
         res = json.loads(res.text)
         table = PrettyTable(['Run Id', 'Started At', 'Finished At', 'State'])
-        for element in res['all_runs']:
+        for element in res:
             table.add_row([element['run_id'], element['started_at'], element['finished_at'], element['state']])
         print(table)
 

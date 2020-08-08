@@ -35,7 +35,7 @@ run_id int NOT NULL,
 site_id int NOT NULL,
 started_at TIMESTAMP NULL DEFAULT NULL,
 last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-job_state ENUM ('STARTED','STALLED','COMPLETED','KILLED')  NOT NULL,
+job_state ENUM ('STARTED','COMPLETED','KILLED')  NOT NULL,
 FOREIGN KEY (site_id) references sites(site_id),
 FOREIGN KEY (run_id) references run(run_id)); 
 
