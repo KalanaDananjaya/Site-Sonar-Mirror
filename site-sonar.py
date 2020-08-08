@@ -121,14 +121,14 @@ def summary(args):
         completed_job_num = len(get_all_job_ids_by_state('COMPLETED'))
         killed_job_num = len(get_all_job_ids_by_state('KILLED'))
 
-        url = BACKEND_URL +'/jobs'
-        res = requests.post(url, json = {'RunId': args.run_id})
-        res = json.loads(res.text)
-
         print ("============== Node Coverage Summary ==============+")
         print('Total Sites Attempted:', len(res))
         print('Total Nodes in Attempted Sites:', tot_nodes)
         print('Covered Nodes in Attempted Sites:', covered_nodes )
+
+        url = BACKEND_URL +'/jobs'
+        res = requests.post(url, json = {'RunId': args.run_id})
+        res = json.loads(res.text)
 
         print ("============== Job Completion Summary ==============")
         print('Total Started Jobs:', res['started_jobs'])
