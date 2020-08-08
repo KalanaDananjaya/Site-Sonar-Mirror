@@ -77,8 +77,11 @@ def job_submission(jdl_name):
                         if ("Your new job ID is" in line):
                             job_id = line.split(' ')[-1]
                             job_id = escape_string(job_id)
-                if p.returncode != 0:
+                # Exit code 121 is given if a job is rejected from the task queue. It is ignored to move forward submitting other jobs
+                if p.returncode != 0 and p.returncode != 121:
                     raise CalledProcessError(p.returncode, p.args)
+                if p.returncode == 121:
+                    logging.warning(p.returncode, p.args)
                 add_job(job_id, site['site_id'])
             update_site_last_update_time(site['site_id'])
     else:

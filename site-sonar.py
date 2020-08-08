@@ -70,6 +70,8 @@ def abort(args):
                 # Exit code 121 is returned if the job does not exists/cannot be killed - It is not caught as an exception
                 if p.returncode != 0 and p.returncode != 121:
                     raise CalledProcessError(p.returncode, p.args)
+                if p.returncode == 121:
+                    logging.warning(p.returncode, p.args)
                 if end == num_jobs:
                     logging.info ('Total of %d jobs killed succesfully',num_jobs)
                     break
@@ -107,6 +109,7 @@ def summary(args):
     if args.run_id:
         url = BACKEND_URL +'/run_summary'
         res = requests.post(url, json = {'RunId': args.run_id})
+        print (res.text)
         res = json.loads(res.text)
         table = PrettyTable(['Site Id', 'Site Name', 'Total Nodes', 'Covered Nodes', 'Coverage'])
         tot_nodes = 0
