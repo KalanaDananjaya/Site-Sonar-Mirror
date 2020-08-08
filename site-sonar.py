@@ -199,6 +199,13 @@ def search(args):
             node_table.add_row([key, 'Not Matching', fill(str(unmatching_nodes_data[key]), width=70)])
         print (node_table)
 
+def testdb(args):
+    cursor,conn = get_connection(auto_commit=False)
+    if conn:
+        logging.info("Database connection successfully establised. Please proceed.")
+    else:
+        logging.error("Cannot establish database connection")
+
 
 def get_log_lvl(lvl):
     levels = {
@@ -238,6 +245,9 @@ abort_parser.set_defaults(func=abort)
 
 reset_parser = subparsers.add_parser('reset')
 reset_parser.set_defaults(func=reset)
+
+testdb_parser = subparsers.add_parser('testdb')
+testdb_parser.set_defaults(func=testdb)
 
 summary_parser = subparsers.add_parser('summary')
 summary_parser.add_argument('-r', '--run_id', default=None, help='Run ID')
