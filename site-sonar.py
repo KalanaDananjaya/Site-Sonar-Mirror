@@ -109,13 +109,12 @@ def summary(args):
     if args.run_id:
         url = BACKEND_URL +'/run_summary'
         res = requests.post(url, json = {'RunId': args.run_id})
-        print (res.text)
         res = json.loads(res.text)
         table = PrettyTable(['Site Id', 'Site Name', 'Total Nodes', 'Covered Nodes', 'Coverage'])
         tot_nodes = 0
         covered_nodes = 0
         for element in res:
-            table.add_row([element['site_id'], element['sitename'], element['total_nodes'], element['covered_nodes'], element['coverage']])
+            table.add_row([element['site_id'], element['sitename'], element['total_nodes'], element['covered_nodes'], str(round(element['coverage']))+' %'])
             tot_nodes += int(element['total_nodes'])
             covered_nodes += int(element['covered_nodes'])
         print(table)
@@ -123,21 +122,53 @@ def summary(args):
         started_job_num = len(get_all_job_ids_by_state('STARTED'))
         completed_job_num = len(get_all_job_ids_by_state('COMPLETED'))
         killed_job_num = len(get_all_job_ids_by_state('KILLED'))
+        attempted_sites = len(res)
 
-        print ("============== Node Coverage Summary ==============+")
-        print('Total Sites Attempted:', len(res))
-        print('Total Nodes in Attempted Sites:', tot_nodes)
-        print('Covered Nodes in Attempted Sites:', covered_nodes )
-
-        url = BACKEND_URL +'/jobs'
+        url = BACKEND_URL + '/all_sites'
+        res = requests.get(url)
+        sites = json.loads(res.text)
+        sitenames = {}
+        for element in sites:
+            sitenames.update({ str(element['site_id']):element['site_name'] })
+        url = BACKEND_URL + '/jobs'
         res = requests.post(url, json = {'RunId': args.run_id})
         res = json.loads(res.text)
+    
+        total_submitted_jobs = 0
+        total_completed_jobs = 0
+        total_killed_jobs = 0
+        table = PrettyTable(['Site Id', 'Site Name', 'Pending Jobs', 'Completed Jobs', 'Killed Jobs', 'Completed Percentage'])
+
+        for site_id in sorted(map(int,res.keys())):
+            site_id = str(site_id)
+            if not(res[site_id].get('STARTED')):
+                res[site_id].update({ 'STARTED':0 })
+            if not(res[site_id].get('COMPLETED')):
+                res[site_id].update({ 'COMPLETED':0 })
+            if not(res[site_id].get('KILLED')):
+                res[site_id].update({ 'KILLED':0 })
+
+            submitted_jobs = res[site_id]['STARTED']
+            completed_jobs = res[site_id]['COMPLETED']
+            killed_jobs = res[site_id]['KILLED']
+
+            total_submitted_jobs += submitted_jobs
+            total_completed_jobs += completed_jobs
+            total_killed_jobs += killed_jobs
+            table.add_row([site_id, sitenames[site_id], submitted_jobs , completed_jobs, killed_jobs, str(round((completed_jobs/(completed_jobs+submitted_jobs+killed_jobs))*100))+' %'])
+        print(table)
+
+        print ("============== Node Coverage Summary ==============+")
+        print('Total Sites Attempted:', attempted_sites)
+        print('Total Nodes in Attempted Sites:', tot_nodes)
+        print('Covered Nodes in Attempted Sites:', covered_nodes )
+        print()
 
         print ("============== Job Completion Summary ==============")
-        print('Total Started Jobs:', res['started_jobs'])
-        print('Total Completed Jobs:', res['completed_jobs'])
-        print('Total Killed Jobs:', res['killed_jobs'])
-        print('Job Completion Percentage:', round((res['completed_jobs']/(res['started_jobs']+res['completed_jobs']+res['killed_jobs']))*100),'%')
+        print('Total Started Jobs:', total_submitted_jobs)
+        print('Total Completed Jobs:', total_completed_jobs)
+        print('Total Killed Jobs:', total_killed_jobs)
+        print('Job Completion Percentage:', round((total_completed_jobs/(total_submitted_jobs+total_completed_jobs+total_killed_jobs))*100),'%')
 
     else:
         url = BACKEND_URL +'/all_runs_cli'
