@@ -107,29 +107,13 @@ def summary(args):
     from prettytable import PrettyTable
 
     if args.run_id:
-        url = BACKEND_URL +'/run_summary'
-        res = requests.post(url, json = {'RunId': args.run_id})
-        res = json.loads(res.text)
-        table = PrettyTable(['Site Id', 'Site Name', 'Total Nodes', 'Covered Nodes', 'Coverage'])
-        tot_nodes = 0
-        covered_nodes = 0
-        for element in res:
-            table.add_row([element['site_id'], element['sitename'], element['total_nodes'], element['covered_nodes'], str(round(element['coverage']))+' %'])
-            tot_nodes += int(element['total_nodes'])
-            covered_nodes += int(element['covered_nodes'])
-        print(table)
-
-        started_job_num = len(get_all_job_ids_by_state('STARTED'))
-        completed_job_num = len(get_all_job_ids_by_state('COMPLETED'))
-        killed_job_num = len(get_all_job_ids_by_state('KILLED'))
-        attempted_sites = len(res)
-
         url = BACKEND_URL + '/all_sites'
         res = requests.get(url)
         sites = json.loads(res.text)
         sitenames = {}
         for element in sites:
             sitenames.update({ str(element['site_id']):element['site_name'] })
+
         url = BACKEND_URL + '/jobs'
         res = requests.post(url, json = {'RunId': args.run_id})
         res = json.loads(res.text)
@@ -137,8 +121,8 @@ def summary(args):
         total_submitted_jobs = 0
         total_completed_jobs = 0
         total_killed_jobs = 0
-        table = PrettyTable(['Site Id', 'Site Name', 'Pending Jobs', 'Completed Jobs', 'Killed Jobs', 'Completed Percentage'])
-
+       
+        data_dict = {}
         for site_id in sorted(map(int,res.keys())):
             site_id = str(site_id)
             if not(res[site_id].get('STARTED')):
@@ -152,11 +136,44 @@ def summary(args):
             completed_jobs = res[site_id]['COMPLETED']
             killed_jobs = res[site_id]['KILLED']
 
+            data_dict.update({
+                int(site_id): {
+                    'sitename': sitenames[site_id],
+                    'site_nodes': '-', 
+                    'covered_nodes': '-',
+                    'node_coverage': '-',
+                    'pending_jobs': submitted_jobs,
+                    'completed_jobs': completed_jobs,
+                    'killed_jobs': killed_jobs,
+                    'completed_job_percentage': str(round((completed_jobs/(completed_jobs+submitted_jobs+killed_jobs))*100))+' %'
+                }
+            })
+
             total_submitted_jobs += submitted_jobs
             total_completed_jobs += completed_jobs
             total_killed_jobs += killed_jobs
-            table.add_row([site_id, sitenames[site_id], submitted_jobs , completed_jobs, killed_jobs, str(round((completed_jobs/(completed_jobs+submitted_jobs+killed_jobs))*100))+' %'])
-        print(table)
+            
+        url = BACKEND_URL +'/run_summary'
+        res = requests.post(url, json = {'RunId': args.run_id})
+        run_res = json.loads(res.text)
+        attempted_sites = len(run_res)
+
+        tot_nodes = 0
+        covered_nodes = 0
+       
+        for element in run_res:
+            data_dict[element['site_id']]['sitename'] = element['sitename']
+            data_dict[element['site_id']]['site_nodes'] = element['total_nodes']
+            data_dict[element['site_id']]['covered_nodes'] = element['covered_nodes']
+
+            data_dict[element['site_id']]['node_coverage'] = str(round(element['coverage']))+' %'
+            tot_nodes += int(element['total_nodes'])
+            covered_nodes += int(element['covered_nodes'])       
+
+        table = PrettyTable(['Id', 'Site Name', 'Pending Jobs', 'Completed Jobs', 'Killed Jobs', 'Job completion', 'Total Nodes', 'Covered Nodes', 'Coverage'])
+        for site_id in data_dict.keys():
+            table.add_row([site_id, data_dict[site_id]['sitename'], data_dict[site_id]['pending_jobs'] , data_dict[site_id]['completed_jobs'], data_dict[site_id]['killed_jobs'], data_dict[site_id]['completed_job_percentage'], data_dict[site_id]['site_nodes'],data_dict[site_id]['covered_nodes'],data_dict[site_id]['node_coverage']])
+        print (table)
 
         print ("============== Node Coverage Summary ==============+")
         print('Total Sites Attempted:', attempted_sites)
