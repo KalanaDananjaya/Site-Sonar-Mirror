@@ -18,6 +18,7 @@ monitors = {
     'Overlay': 'echo $(cat /etc/singularity/singularity.conf | grep "enable overlay" | head -1)',
     'Underlay': 'echo $(cat /etc/singularity/singularity.conf | grep "enable underlay")',
     'Container Enabled?': 'echo $(ls / | grep workdir])',
+    'LHCB Benchmark': 'echo $(bash /cvmfs/alice.cern.ch/scripts/lhcbmarks.sh)',
     'Max namespaces': 'echo $(cat /proc/sys/user/max_user_namespaces)'
 }
 
