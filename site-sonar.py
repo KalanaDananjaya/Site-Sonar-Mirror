@@ -50,11 +50,12 @@ def fetch_results(args):
 
 def abort(args):
     # Kill all jobs
+    # All flag is set by default
     if args.all:
         job_ids = get_all_job_ids_by_state('STARTED')
         num_jobs = len(job_ids)
         if num_jobs != 0:
-            logging.debug('Started killing %d jobs...',num_jobs)
+            logging.info('Started killing %d jobs...',num_jobs)
             start = 0
             end = 500
             while True:
@@ -85,8 +86,10 @@ def abort(args):
             abort_proc_state = update_processing_state('STALLED',initialize=False)
             change_run_state('TIMED_OUT')
         else:
-            abort_proc_state = update_processing_state('ABORTED',initialize=False)
-            change_run_state('ABORTED')
+            # If finish flag is set only kill the jobs, don't change site or run states
+            if not args.finish:
+                abort_proc_state = update_processing_state('ABORTED',initialize=False)
+                change_run_state('ABORTED')
 
     # Kill jobs with given ids
     elif args.job_id:
@@ -306,6 +309,7 @@ abort_parser = subparsers.add_parser('abort')
 abort_parser.add_argument('-id', '--job_id', help='Comma separated job IDs to kill')
 abort_parser.add_argument('-a', '--all',action='store_false', help='Kill all the running jobs. Set to false to kill selected jobs')
 abort_parser.add_argument('-c', '--clean',action='store_true', help='Kill all remaining jobs and mark all remaining jobs')
+abort_parser.add_argument('-f', '--finish',action='store_true', help='Kill all remaining jobs without changing site or run states')
 abort_parser.set_defaults(func=abort)
 
 reset_parser = subparsers.add_parser('reset')
