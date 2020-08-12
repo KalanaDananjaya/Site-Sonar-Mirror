@@ -24,7 +24,7 @@ Use the command `python3 site-sonar.py submit` to start job submission
 
 > The job results will be added to the database by Site Sonar MonAlisa client.
 
-> A full grid run will take around 24 hours. Therefore use `nohup <command> &` to run the `submit` command
+> A full grid run will take around 36 hours. Therefore use `nohup <command> &` to run the `submit` command
 
 ## Aborting a Run
 
@@ -32,6 +32,12 @@ If you want to abort the current run use the command `python3 site-sonar.py abor
 > If the tool is running in the background, make sure to bring it to the foreground before using the above command
 
 > If you abort a run, its data will not be available for searching
+
+If you want to abort the run while preserving the collected results, use `--clean` flag. `clean` flag kills the remaining jobs and update the processing states of the sites and the run.
+> `python3 site-sonar.py abort --clean`
+
+If the run has completed and you want to kill the remaining jobs, use `--finish` flag. `finish` flag kills the remaining jobs without changing any processing states.
+> `python3 site-sonar.py abort --finish`
 
 ## Finishing a Run
 The run will be marked as `COMPLETED` if any of the following conditions are met.
@@ -49,3 +55,16 @@ A `COMPLETED` or `TIMED_OUT` run is considered as a finished run and its data wi
 ## Starting a New Run
 * To start a new run, start a fresh environment by using the command `python3 site-sonar.py reset`
 * Submit the jobs using `python3 site-sonar.py submit`
+
+## Obtaining a Run Analysis
+
+* To get a summary of all the runs, use `python3 site-sonar.py summary`
+* To get a summary of a specific run, use `python3 site-sonar.py summary -r <run_id>`
+
+## Query Results
+You can either use the Site Sonar website or the CLI tool to query the collected results. Use the following command to search the results.
+`./site-sonar.py search -r <run_id> -q A="<identifier>: <value>" -eq "<relationship among queries>"`
+* To add multiple queries use the format `<next_english_letter>="<identifier>: <value>"`
+* Define the relationship as a boolean expression `A & ( B | ~C)`
+(Only the english letter in order the symbols [`&`,`|`,`~`,`(`,`)`] are allowed)
+> ./site-sonar.py search -r 1 -q A="Singularity: SUPPORTED" -q B="Max Namespaces:15000" -eq "A | B"
