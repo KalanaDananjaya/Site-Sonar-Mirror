@@ -1,35 +1,72 @@
 DROP TABLE IF EXISTS sites;
 CREATE TABLE sites
-(site_id INTEGER PRIMARY KEY AUTOINCREMENT,
-site_name text NOT NULL,
-normalized_name text NOT NULL,
+(site_id INTEGER PRIMARY KEY AUTO_INCREMENT,
+site_name varchar(50) NOT NULL,
+normalized_name varchar(50) NOT NULL,
 num_nodes int NOT NULL,
-last_update text);
+last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);
+
+DROP TABLE IF EXISTS run;
+CREATE TABLE run
+(run_id int PRIMARY KEY AUTO_INCREMENT,
+started_at TIMESTAMP NULL DEFAULT NULL,
+last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+state ENUM ('STARTED','COMPLETED','TIMED_OUT','ABORTED')
+);
 
 DROP TABLE IF EXISTS processing_state;
 CREATE TABLE processing_state
-(site_id int NOT NULL PRIMARY KEY,
-timestamp int NOT NULL,
-state text CHECK(state IN ('WAITING','COMPLETE','ERRONEOUS','PARSED') ) NOT NULL);
-
-DROP TABLE IF EXISTS nodes;
-CREATE TABLE nodes
-(node_id INTEGER PRIMARY KEY AUTOINCREMENT,
-site_id int NOT NULL,
-node_name text NOT NULL);
+(site_id int NOT NULL,
+run_id int NOT NULL,
+started_at TIMESTAMP NULL DEFAULT NULL,
+last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+state ENUM ('WAITING','COMPLETED','STALLED','ABORTED')  NOT NULL,
+running_job_count int,
+completed_job_count int,
+killed_job_count int,
+PRIMARY KEY(site_id,run_id),
+FOREIGN KEY (site_id) references sites(site_id),
+FOREIGN KEY (run_id) references run(run_id)); 
 
 DROP TABLE IF EXISTS jobs;
 CREATE TABLE jobs
 (job_id int NOT NULL PRIMARY KEY,
+run_id int NOT NULL,
 site_id int NOT NULL,
-timestamp int NOT NULL,
-abstract_state text CHECK(abstract_state IN ('STARTED','ERROR','STALLED','FINISHED') ) NOT NULL,
-state text CHECK(state IN ('K','R','ST','D','DW','W','OW','I','S','SP','SV','SVD','ANY','ASG','AST','FM','IDL','INT','M','SW','ST','TST','EA','EE','EI','EIB','EM','ERE','ES','ESV','EV','EVN','EVT','ESP','EW','EVE','FF','Z','XP','UP','F','INC') ) NOT NULL);
+started_at TIMESTAMP NULL DEFAULT NULL,
+last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+job_state ENUM ('STARTED','COMPLETED','KILLED')  NOT NULL,
+FOREIGN KEY (site_id) references sites(site_id),
+FOREIGN KEY (run_id) references run(run_id)); 
 
-DROP TABLE IF EXISTS parsed_outputs;
-CREATE TABLE parsed_outputs
-(site_id int NOT NULL,
+DROP TABLE IF EXISTS nodes;
+CREATE TABLE nodes
+(node_id INTEGER PRIMARY KEY AUTO_INCREMENT,
+run_id int NOT NULL,
+site_id int NOT NULL,
+job_id int NOT NULL,
+node_name varchar(250) NOT NULL,
+FOREIGN KEY (site_id) references sites(site_id),
+FOREIGN KEY (run_id) references run(run_id),
+FOREIGN KEY (job_id) references jobs(job_id));
+
+DROP TABLE IF EXISTS parameters;
+CREATE TABLE parameters
+(job_id int NOT NULL, 
+run_id int NOT NULL,
+site_id int NOT NULL,
 node_id int NOT NULL,
-parsed_result text,
-PRIMARY KEY (site_id,node_id));
+paramName varchar(500) NOT NULL,
+paramValue TEXT NOT NULL,
+last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+PRIMARY KEY (job_id,paramName),
+FOREIGN KEY (site_id) references sites(site_id),
+FOREIGN KEY (run_id) references run(run_id),
+FOREIGN KEY (job_id) references jobs(job_id));
 
+DROP TABLE IF EXISTS job_keys;
+CREATE TABLE job_keys
+(run_id int NOT NULL PRIMARY KEY,
+key_list TEXT NOT NULL,
+FOREIGN KEY (run_id) references run(run_id)
+);
