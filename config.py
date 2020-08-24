@@ -19,5 +19,5 @@ OUTPUT_FOLDER               = 'outputs'
 SITES_CSV_FILE = 'ce_list.csv'
 
 # Search Backend configs
-BACKEND_URL = 'http://18.220.133.83:5000'
+BACKEND_URL = 'http://<ip_of_the_backend>'
 
