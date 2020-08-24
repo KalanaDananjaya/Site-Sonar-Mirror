@@ -1,10 +1,10 @@
-import csv 
+import csv
 import datetime
 import time
 import logging
 import os
 
-from config import DB_HOST,DB_USER,DB_PWD,DB_DATABASE
+from config import DB_HOST, DB_USER, DB_PWD, DB_DATABASE
 from sql_queries import *
 
 import mysql.connector
@@ -17,25 +17,39 @@ def normalize_ce_name(target_ce):
 
 # Connection Functions
 def get_connection(auto_commit=True):
+    """
+    Establish database connection
+
+    Args:
+        auto_commit (bool, optional): Enable auto commit. Defaults to True.
+
+    Returns:
+        cursor: MySQL cursor object
+        connection: MySQL connection object
+    """
     try:
         connection = mysql.connector.connect(
-        host=DB_HOST,
-        user=DB_USER,
-        password=DB_PWD,
-        database=DB_DATABASE,
-        autocommit=auto_commit
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PWD,
+            database=DB_DATABASE,
+            autocommit=auto_commit
         )
         cursor = connection.cursor()
-        return cursor,connection
+        return cursor, connection
     except mysql.connector.Error as error:
         logging.error("Error while connecting to MySQL", error)
 
 
 def clear_tables(all=False):
     """
-    Clear Nodes, Jobs, Processing_state, Parsed_outputs tables
+    Clear tables nodes, jobs, processing_state, parameters
+
+    Args:
+        all (bool, optional): Clear sites, run, keys table if True . Defaults to False.
     """
-    cursor,conn = get_connection(auto_commit=False)
+
+    cursor, conn = get_connection(auto_commit=False)
     try:
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
         if all:
@@ -50,8 +64,8 @@ def clear_tables(all=False):
         conn.commit()
         logging.debug('Database tables cleared')
     except mysql.connector.Error as error:
-            logging.error("Failed to clear database: {}".format(error))
-            conn.rollback()
+        logging.error("Failed to clear database: {}".format(error))
+        conn.rollback()
     finally:
         if(conn.is_connected()):
             cursor.close()
@@ -59,9 +73,12 @@ def clear_tables(all=False):
 
 
 def increment_run_id():
-    cursor,conn = get_connection()
+    """
+    Increment the Run ID by one
+    """
+    cursor, conn = get_connection()
     try:
-        cursor.execute(INCREMENT_RUN_ID,['STARTED'])
+        cursor.execute(INCREMENT_RUN_ID, ['STARTED'])
         logging.debug('Run Id incremented')
     except mysql.connector.Error as error:
         logging.error("Failed to increment run id: {}".format(error))
@@ -72,20 +89,33 @@ def increment_run_id():
 
 
 def start_new_run():
-    cursor,conn = get_connection()
+    """
+    Start a new run if a run does not exist
+    """
+    cursor, conn = get_connection()
     run_id = get_run_id()
     run_exists = check_run_exists(run_id)
     if not run_exists:
         increment_run_id()
     else:
-        logging.error("Cannot start a new run as the last run is still running")
+        logging.error(
+            "Cannot start a new run as the last run is still running")
 
 
 def check_run_exists(run_id):
-    cursor,conn = get_connection()
+    """
+    Check whether the given run_id is still running
+
+    Args:
+        run_id (int): Run ID
+
+    Returns:
+        flag: True if run_id is still running
+    """
+    cursor, conn = get_connection()
     flag = True
     try:
-        cursor.execute(CHECK_RUN_STATE,[run_id])
+        cursor.execute(CHECK_RUN_STATE, [run_id])
         state = cursor.fetchone()[0]
         if state == 'STARTED':
             logging.debug('Last run is still running')
@@ -104,13 +134,19 @@ def check_run_exists(run_id):
 
 
 def change_run_state(state):
+    """
+    Change the state of the Run
+
+    Args:
+        state (enum ['STARTED','COMPLETED','TIMED_OUT','ABORTED']): Run State
+    """
     run_id = get_run_id()
-    cursor,conn = get_connection()
+    cursor, conn = get_connection()
     try:
-        cursor.execute(ABORT_RUN,[state,run_id])
+        cursor.execute(ABORT_RUN, [state, run_id])
         logging.debug('Run aborted')
     except mysql.connector.Error as error:
-            logging.error("Failed to abort the run: {}".format(error))
+        logging.error("Failed to abort the run: {}".format(error))
     finally:
         if(conn.is_connected()):
             cursor.close()
@@ -118,13 +154,19 @@ def change_run_state(state):
 
 
 def get_run_id():
+    """
+    Get latest Run ID
+
+    Returns:
+        run_id(int): Run ID
+    """
     cursor, conn = get_connection()
     try:
         cursor.execute(GET_LAST_RUN_ID)
         run_id = cursor.fetchone()
         return run_id[0]
     except mysql.connector.Error as error:
-            logging.error("Failed to get last run id: {}".format(error))
+        logging.error("Failed to get last run id: {}".format(error))
     finally:
         if(conn.is_connected()):
             cursor.close()
@@ -156,11 +198,11 @@ def get_sites():
                 'normalized_name': normalized_name,
                 'num_nodes': num_nodes,
                 'last_update': last_update
-                }
+            }
             sites.append(site)
         return sites
     except mysql.connector.Error as error:
-            logging.error("Failed to retrieve sites: {}".format(error))
+        logging.error("Failed to retrieve sites: {}".format(error))
     finally:
         if(conn.is_connected()):
             cursor.close()
@@ -184,7 +226,7 @@ def get_site_ids():
             ids.append(site_id)
         return ids
     except mysql.connector.Error as error:
-            logging.debug("Failed to get site ids: {}".format(error))
+        logging.debug("Failed to get site ids: {}".format(error))
     finally:
         if(conn.is_connected()):
             cursor.close()
@@ -199,7 +241,7 @@ def add_sites_from_csv(csv_filename):
         csv_filename (str): Name of the CSV file (Format: sitename,num_nodes)
     """
 
-    cursor,conn = get_connection()
+    cursor, conn = get_connection()
     site_tuples = []
     sitenames = get_sitenames()
     with open(csv_filename, newline='') as csvfile:
@@ -209,7 +251,8 @@ def add_sites_from_csv(csv_filename):
             current_site_name = details[0]
             is_exists = check_sitename_exists(sitenames, current_site_name)
             if (is_exists == True):
-                logging.warning('%s already exists in the database. Please use the update function. Skipping...',current_site_name)
+                logging.warning(
+                    '%s already exists in the database. Please use the update function. Skipping...', current_site_name)
             else:
                 num_nodes = details[1]
                 if not num_nodes:
@@ -217,7 +260,8 @@ def add_sites_from_csv(csv_filename):
                 else:
                     num_nodes = int(num_nodes)
                 normalized_name = normalize_ce_name(current_site_name)
-                site_tuples.append((current_site_name, normalized_name, num_nodes))
+                site_tuples.append(
+                    (current_site_name, normalized_name, num_nodes))
                 logging.debug('Adding %s to the database', current_site_name)
     try:
         cursor.executemany(ADD_SITE, site_tuples)
@@ -242,16 +286,17 @@ def update_site_last_update_time(site_id):
     """
     cursor, conn = get_connection()
     try:
-        cursor.execute(UPDATE_LAST_SITE_UPDATE_TIME,[site_id])
+        cursor.execute(UPDATE_LAST_SITE_UPDATE_TIME, [site_id])
     except mysql.connector.Error as error:
-        logging.error("Failed to update site last update times: {}".format(error))
+        logging.error(
+            "Failed to update site last update times: {}".format(error))
     finally:
         if(conn.is_connected()):
             cursor.close()
             conn.close()
-                
 
-def check_sitename_exists(sitenames,current_site_name):
+
+def check_sitename_exists(sitenames, current_site_name):
     """
     Check whether current_site_name exists in sitenames
 
@@ -276,10 +321,10 @@ def get_sitenames():
     Get all names of sites
 
     Returns:
-        sitenames
+        sitenames(list)
     """
     cursor, conn = get_connection()
-    sitenames=[]
+    sitenames = []
     try:
         cursor.execute(GET_SITENAMES)
         results = cursor.fetchall()
@@ -294,7 +339,7 @@ def get_sitenames():
             conn.close()
 
 
-def update_processing_state(state,initialize=True):
+def update_processing_state(state, initialize=True):
     """
     Update processing_states table
 
@@ -308,16 +353,16 @@ def update_processing_state(state,initialize=True):
             site_ids = get_site_ids()
             state_tuple = []
             for site_id in site_ids:
-                state_tuple.append((site_id,run_id,state))
-            cursor.executemany(INITIALIZE_PROCESSING_STATE,state_tuple)
+                state_tuple.append((site_id, run_id, state))
+            cursor.executemany(INITIALIZE_PROCESSING_STATE, state_tuple)
         else:
             site_ids = get_sites_by_processing_state('WAITING')
             state_tuple = []
             for site_id in site_ids:
-                state_tuple.append((state, site_id,run_id))
-            cursor.executemany(UPDATE_PROCESSING_STATE,state_tuple)
+                state_tuple.append((state, site_id, run_id))
+            cursor.executemany(UPDATE_PROCESSING_STATE, state_tuple)
         conn.commit()
-        logging.debug('Updated processing states to %s successfully',state)
+        logging.debug('Updated processing states to %s successfully', state)
         success_flag = True
     except mysql.connector.Error as error:
         logging.error("Failed to update processing states: {}".format(error))
@@ -330,11 +375,21 @@ def update_processing_state(state,initialize=True):
 
 
 def get_sites_by_processing_state(state):
+    """
+    Get Sites in the given state
+
+    Args:
+        state (enum ['WAITING','COMPLETED','STALLED','ABORTED']): Processing state of site
+        run_id (int): Run ID
+
+    Returns:
+        site_ids(list): Site ID list
+    """
     run_id = get_run_id()
     site_ids = []
     cursor, conn = get_connection()
-    try: 
-        cursor.execute(GET_SITE_IDS_BY_PROCESSING_STATE,(state,run_id))
+    try:
+        cursor.execute(GET_SITE_IDS_BY_PROCESSING_STATE, (state, run_id))
         results = cursor.fetchall()
         for row in results:
             site_ids.append(row[0])
@@ -348,7 +403,7 @@ def get_sites_by_processing_state(state):
 
 
 # Job related functions
-def add_job(job_id,site_id):
+def add_job(job_id, site_id):
     """
     Add jobs to the database
 
@@ -359,8 +414,8 @@ def add_job(job_id,site_id):
     cursor, conn = get_connection()
     try:
         run_id = get_run_id()
-        cursor.execute(ADD_JOB, (job_id,run_id, site_id, 'STARTED'))
-        logging.debug('Job %s added to database succesfully',job_id.strip())
+        cursor.execute(ADD_JOB, (job_id, run_id, site_id, 'STARTED'))
+        logging.debug('Job %s added to database succesfully', job_id.strip())
     except mysql.connector.Error as error:
         logging.error("Failed to add job: {}".format(error))
     finally:
@@ -382,7 +437,7 @@ def get_all_job_ids_by_state(state):
     cursor, conn = get_connection()
     try:
         run_id = get_run_id()
-        cursor.execute(GET_ALL_JOB_IDS_BY_STATE,[state,run_id])
+        cursor.execute(GET_ALL_JOB_IDS_BY_STATE, [state, run_id])
         results = cursor.fetchall()
         job_ids = []
         for row in results:
@@ -396,7 +451,7 @@ def get_all_job_ids_by_state(state):
             conn.close()
 
 
-def update_job_state_by_job_id(job_id,state):
+def update_job_state_by_job_id(job_id, state):
     """
     Update state of the job
 
@@ -408,10 +463,10 @@ def update_job_state_by_job_id(job_id,state):
     run_id = get_run_id()
     job_tuple = []
     if type(job_id) == str:
-        job_tuple.append((state,job_id,run_id))
-    elif type(job_id) == list: 
+        job_tuple.append((state, job_id, run_id))
+    elif type(job_id) == list:
         for id in job_id:
-            job_tuple.append((state,id,run_id))
+            job_tuple.append((state, id, run_id))
     try:
         cursor.executemany(UPDATE_JOB_STATE_BY_JOBID, job_tuple)
         conn.commit()
@@ -435,7 +490,7 @@ def add_job_keys(keys):
     try:
         run_id = get_run_id()
         cursor.execute(ADD_KEYS, (run_id, keys))
-        logging.debug('Job key list %s added to database succesfully',keys)
+        logging.debug('Job key list %s added to database succesfully', keys)
     except mysql.connector.Error as error:
         logging.error("Failed to add job keys: {}".format(error))
     finally:

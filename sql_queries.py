@@ -7,7 +7,7 @@ UPDATE_LAST_SITE_UPDATE_TIME = 'UPDATE sites SET last_update = NOW() WHERE site_
 DELETE_SITES = 'TRUNCATE TABLE sites'
 
 DELETE_NODES = 'TRUNCATE TABLE nodes'
- 
+
 ADD_JOB = 'INSERT INTO jobs (job_id,run_id,site_id,started_at,last_update,job_state) VALUES (%s,%s, %s, NOW(), NOW(), %s)'
 GET_ALL_JOB_IDS_BY_STATE = 'SELECT job_id FROM jobs WHERE job_state = %s AND run_id = %s'
 UPDATE_JOB_STATE_BY_JOBID = 'UPDATE jobs SET last_update=NOW(), job_state=%s WHERE job_id=%s AND run_id = %s'
