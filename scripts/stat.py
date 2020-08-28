@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
-from subprocess import Popen,PIPE
-import time  
+from subprocess import Popen, PIPE
+import time
 import zipfile
 
 url = os.environ.get('APMON_CONFIG')
@@ -19,7 +19,13 @@ monitors = {
     'Underlay': 'echo $(cat /etc/singularity/singularity.conf | grep "enable underlay")',
     'Container Enabled?': 'echo $(ls / | grep workdir])',
     'LHCB Benchmark': 'echo $(bash /cvmfs/alice.cern.ch/scripts/lhcbmarks.sh)',
-    'Max namespaces': 'echo $(cat /proc/sys/user/max_user_namespaces)'
+    'Max namespaces': 'echo $(cat /proc/sys/user/max_user_namespaces)',
+    'OS': 'echo $(cat /etc/redhat-release)',
+    'CVMFS version': 'echo $(attr -qg revision /cvmfs/alice.cern.ch)',
+    'CPU Info': 'echo $(cat /proc/cpuinfo)',
+    'RAM Info': 'echo $(cat /proc/meminfo)',
+    'GCC Version': 'echo $(cat gcc --version | grep gcc)',
+    'WLCG Metapackage': '[ -z $(echo $(rpm -qa | grep -w HEP_OSlibs) | cut -f1 -d$" ") ] && echo "Available: No" || echo "Available: Yes"'
 }
 
 if __name__ == "__main__":
@@ -51,13 +57,14 @@ if __name__ == "__main__":
         command = monitors[key]
         value = ''
         with Popen(command, stdout=PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
-            print (command)
+            print(command)
             for line in p.stdout:
                 value += line
-            print (value)
-        apm.sendParameters("SiteSonar", jobId + "_" + hostname , {str(key): str(value)})
+            print(value)
+        apm.sendParameters("SiteSonar", jobId + "_" +
+                           hostname, {str(key): str(value)})
         time.sleep(.005)
-    apm.sendParameters("SiteSonar", jobId + "_" + hostname , {"state": "complete"})
+    apm.sendParameters("SiteSonar", jobId + "_" +
+                       hostname, {"state": "complete"})
     time.sleep(300)
     print("Job Completed")
-    
